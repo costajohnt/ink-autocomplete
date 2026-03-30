@@ -51,19 +51,15 @@ export function useAutocomplete(opts: UseAutocompleteOptions) {
         return;
       }
 
-      // Backspace
-      if (key.backspace) {
+      // Backspace / Delete key — both map to backward delete
+      // On macOS, the physical backspace key sends key.delete (0x7F),
+      // not key.backspace. We treat both as backward delete.
+      if (key.backspace || key.delete) {
         dispatch({ type: 'DELETE_BACKWARD' });
         return;
       }
 
-      // Forward delete
-      if (key.delete) {
-        dispatch({ type: 'DELETE_FORWARD' });
-        return;
-      }
-
-      // Ctrl+D: forward delete (alternative binding)
+      // Ctrl+D: forward delete
       if (input === 'd' && key.ctrl) {
         dispatch({ type: 'DELETE_FORWARD' });
         return;

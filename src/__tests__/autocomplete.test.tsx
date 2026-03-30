@@ -472,8 +472,8 @@ describe('Autocomplete', () => {
     stdin.write('\x01');
     await delay(RENDER_DELAY);
 
-    // Press forward delete (escape sequence [3~)
-    stdin.write('\x1B[3~');
+    // Press Ctrl+D for forward delete
+    stdin.write('\x04');
     await delay(RENDER_DELAY);
 
     // After deleting first char, input is "an"
