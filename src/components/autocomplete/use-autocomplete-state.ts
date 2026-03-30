@@ -13,6 +13,7 @@ export interface AutocompleteState {
   visibleToIndex: number;
   selectedValue: string | null;
   isLoading: boolean;
+  error: Error | null;
 }
 
 // --- Actions ---
@@ -26,11 +27,12 @@ export type AutocompleteAction =
   | { type: 'MOVE_CURSOR_END' }
   | { type: 'FOCUS_NEXT' }
   | { type: 'FOCUS_PREV' }
-  | { type: 'SELECT'; value: string }
+  | { type: 'SELECT'; value: string; label: string }
   | { type: 'ACCEPT' }
   | { type: 'CLOSE' }
   | { type: 'SET_FILTERED'; options: FuzzyMatch[] }
-  | { type: 'SET_LOADING'; isLoading: boolean };
+  | { type: 'SET_LOADING'; isLoading: boolean }
+  | { type: 'SET_ERROR'; error: Error };
 
 function clampVisible(
   focusedIndex: number,
@@ -74,6 +76,7 @@ function createReducer(visibleOptionCount: number) {
           isOpen: true,
           focusedIndex: 0,
           selectedValue: null,
+          error: null,
         };
       }
 
@@ -82,13 +85,17 @@ function createReducer(visibleOptionCount: number) {
         const before = state.inputValue.slice(0, state.cursorOffset - 1);
         const after = state.inputValue.slice(state.cursorOffset);
         const newValue = before + after;
+        const willClose = newValue.length === 0;
         return {
           ...state,
           inputValue: newValue,
           cursorOffset: state.cursorOffset - 1,
-          isOpen: newValue.length > 0,
+          isOpen: !willClose,
           focusedIndex: 0,
           selectedValue: null,
+          error: null,
+          visibleFromIndex: willClose ? 0 : state.visibleFromIndex,
+          visibleToIndex: willClose ? 0 : state.visibleToIndex,
         };
       }
 
@@ -103,6 +110,7 @@ function createReducer(visibleOptionCount: number) {
           isOpen: newValue.length > 0,
           focusedIndex: 0,
           selectedValue: null,
+          error: null,
         };
       }
 
@@ -168,8 +176,8 @@ function createReducer(visibleOptionCount: number) {
           ...state,
           selectedValue: action.value,
           isOpen: false,
-          inputValue: '',
-          cursorOffset: 0,
+          inputValue: action.label,
+          cursorOffset: action.label.length,
           focusedIndex: 0,
         };
       }
@@ -229,6 +237,14 @@ function createReducer(visibleOptionCount: number) {
         return { ...state, isLoading: action.isLoading };
       }
 
+      case 'SET_ERROR': {
+        return {
+          ...state,
+          error: action.error,
+          isLoading: false,
+        };
+      }
+
       default:
         return state;
     }
@@ -242,6 +258,7 @@ export interface UseAutocompleteStateOptions {
   debounceMs?: number;
   onChange?: (value: string) => void;
   onSelect?: (value: string) => void;
+  onError?: (error: Error) => void;
 }
 
 export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
@@ -252,6 +269,7 @@ export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
     debounceMs,
     onChange,
     onSelect,
+    onError,
   } = opts;
 
   const isAsync = typeof options === 'function';
@@ -267,6 +285,7 @@ export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
     visibleToIndex: 0,
     selectedValue: null,
     isLoading: false,
+    error: null,
   };
 
   const reducer = useMemo(
@@ -276,15 +295,18 @@ export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
 
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  // Track onChange/onSelect with refs to avoid stale closures
+  // Track onChange/onSelect/onError with refs to avoid stale closures
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
 
   // Previous inputValue for change detection
   const prevInputRef = useRef(state.inputValue);
   const prevSelectedRef = useRef(state.selectedValue);
+  const prevErrorRef = useRef(state.error);
 
   useEffect(() => {
     if (state.inputValue !== prevInputRef.current) {
@@ -302,6 +324,13 @@ export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
       onSelectRef.current?.(state.selectedValue);
     }
   }, [state.selectedValue]);
+
+  useEffect(() => {
+    if (state.error !== null && state.error !== prevErrorRef.current) {
+      prevErrorRef.current = state.error;
+      onErrorRef.current?.(state.error);
+    }
+  }, [state.error]);
 
   // Stabilize options reference so inline array literals don't cause infinite re-renders.
   // For arrays, do a shallow JSON comparison; for functions, compare by reference.
@@ -345,9 +374,10 @@ export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
               dispatch({ type: 'SET_FILTERED', options: matches });
             }
           },
-          () => {
+          (err) => {
             if (counter === requestCounterRef.current) {
-              dispatch({ type: 'SET_LOADING', isLoading: false });
+              const error = err instanceof Error ? err : new Error(String(err));
+              dispatch({ type: 'SET_ERROR', error });
             }
           },
         );

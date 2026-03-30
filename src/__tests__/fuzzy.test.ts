@@ -105,6 +105,21 @@ describe('fuzzyMatch', () => {
       { start: 6, end: 7 },
     ]);
   });
+
+  it('finds tighter alignment via backward pass', () => {
+    // Greedy forward scan would match "a" at index 1 and "b" at index 4 -> [1, 4]
+    // Backward pass finds the consecutive "ab" at [4, 5] which scores higher
+    const result = fuzzyMatch('ab', 'xaxxab');
+    expect(result).not.toBeNull();
+    expect(result!.matchedIndices).toEqual([4, 5]);
+  });
+
+  it('prefers consecutive alignment over greedy first-found', () => {
+    // "bc" in "xbxxbc": greedy finds [1,4], backward pass finds [4,5]
+    const result = fuzzyMatch('bc', 'xbxxbc');
+    expect(result).not.toBeNull();
+    expect(result!.matchedIndices).toEqual([4, 5]);
+  });
 });
 
 describe('fuzzyFilter', () => {

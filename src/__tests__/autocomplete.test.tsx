@@ -371,6 +371,94 @@ describe('Autocomplete', () => {
     expect(frame).toContain('No items');
   });
 
+  it('handles async error: displays error, fires onError, typing clears error', async () => {
+    const asyncProvider = vi.fn(async (_query: string): Promise<Option[]> => {
+      throw new Error('Network failure');
+    });
+
+    const onError = vi.fn();
+    const { lastFrame, stdin } = render(
+      <Autocomplete
+        options={asyncProvider}
+        debounceMs={0}
+        onError={onError}
+      />,
+    );
+    await delay(MOUNT_DELAY);
+
+    // Type to trigger async fetch that will fail
+    stdin.write('a');
+    await delay(200);
+
+    // Error message should be displayed
+    const frame = lastFrame();
+    expect(frame).toContain('Network failure');
+
+    // onError callback should have been called
+    expect(onError).toHaveBeenCalledWith(expect.any(Error));
+    expect(onError.mock.calls[0]![0]!.message).toBe('Network failure');
+
+    // Now set up provider to succeed, then type to clear the error
+    asyncProvider.mockImplementation(async () => {
+      return [{ label: 'Alpha', value: 'alpha' }];
+    });
+
+    stdin.write('l');
+    await delay(200);
+
+    const clearedFrame = lastFrame();
+    // Error should be gone, replaced by results
+    expect(clearedFrame).not.toContain('Network failure');
+    expect(clearedFrame).toContain('Alpha');
+  });
+
+  it('renders with defaultValue', async () => {
+    const onChange = vi.fn();
+    const { lastFrame } = render(
+      <Autocomplete
+        options={defaultOptions}
+        defaultValue="ban"
+        onChange={onChange}
+      />,
+    );
+    await delay(MOUNT_DELAY);
+
+    const frame = lastFrame();
+    // The input should show "ban" (the default value text is rendered)
+    expect(frame).toContain('ban');
+  });
+
+  it('handles forward delete key (DELETE_FORWARD)', async () => {
+    const onChange = vi.fn();
+    const { lastFrame, stdin } = render(
+      <Autocomplete options={defaultOptions} onChange={onChange} />,
+    );
+    await delay(MOUNT_DELAY);
+
+    // Type "ban"
+    stdin.write('ban');
+    await delay(RENDER_DELAY);
+
+    let frame = lastFrame();
+    expect(frame).toContain('Banana');
+
+    // Move cursor to the start (Ctrl+A)
+    stdin.write('\x01');
+    await delay(RENDER_DELAY);
+
+    // Press forward delete (escape sequence [3~)
+    stdin.write('\x1B[3~');
+    await delay(RENDER_DELAY);
+
+    // After deleting first char, input is "an"
+    frame = lastFrame();
+    expect(frame).toBeDefined();
+    // onChange should have been called with the result of the delete
+    expect(onChange).toHaveBeenCalled();
+    const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1]![0];
+    expect(lastCall).toBe('an');
+  });
+
   it('debounces async calls', async () => {
     const asyncProvider = vi.fn(async (_query: string) => {
       return defaultOptions;

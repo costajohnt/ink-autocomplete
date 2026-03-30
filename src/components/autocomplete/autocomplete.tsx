@@ -16,8 +16,10 @@ export interface AutocompleteProps {
   prefix?: string;
   noMatchesText?: string;
   loadingText?: string;
+  errorText?: string;
   onChange?: (value: string) => void;
   onSelect?: (value: string) => void;
+  onError?: (error: Error) => void;
 }
 
 export function Autocomplete({
@@ -30,8 +32,10 @@ export function Autocomplete({
   prefix = '> ',
   noMatchesText = 'No matches',
   loadingText = 'Loading...',
+  errorText,
   onChange,
   onSelect,
+  onError,
 }: AutocompleteProps) {
   const { state, dispatch } = useAutocompleteState({
     options,
@@ -40,6 +44,7 @@ export function Autocomplete({
     debounceMs,
     onChange,
     onSelect,
+    onError,
   });
 
   const { renderedInput } = useAutocomplete({
@@ -57,6 +62,10 @@ export function Autocomplete({
   const aboveCount = state.visibleFromIndex;
   const belowCount = state.filteredOptions.length - state.visibleToIndex;
 
+  const displayError = state.error
+    ? (errorText ?? state.error.message)
+    : null;
+
   return (
     <Box flexDirection="column">
       {/* Input line */}
@@ -72,20 +81,27 @@ export function Autocomplete({
             <Text>{theme.loading(loadingText)}</Text>
           )}
 
+          {/* Error message */}
+          {!state.isLoading && displayError && (
+            <Text color="red">{displayError}</Text>
+          )}
+
           {/* No matches */}
           {!state.isLoading &&
+            !displayError &&
             state.filteredOptions.length === 0 &&
             state.inputValue.length > 0 && (
               <Text>{theme.noMatches(noMatchesText)}</Text>
             )}
 
           {/* Scroll up indicator */}
-          {!state.isLoading && aboveCount > 0 && (
+          {!state.isLoading && !displayError && aboveCount > 0 && (
             <Text>{theme.scrollIndicator(`\u2191 ${aboveCount} more`)}</Text>
           )}
 
           {/* Options */}
           {!state.isLoading &&
+            !displayError &&
             visibleOptions.map((match, i) => {
               const actualIndex = state.visibleFromIndex + i;
               return (
@@ -99,7 +115,7 @@ export function Autocomplete({
             })}
 
           {/* Scroll down indicator */}
-          {!state.isLoading && belowCount > 0 && (
+          {!state.isLoading && !displayError && belowCount > 0 && (
             <Text>{theme.scrollIndicator(`\u2193 ${belowCount} more`)}</Text>
           )}
         </Box>

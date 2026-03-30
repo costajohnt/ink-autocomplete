@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, Text, Box } from 'ink';
-import { Autocomplete } from '../src/index.js';
-import type { Option } from '../src/index.js';
+import { Autocomplete } from 'ink-autocomplete';
+import type { Option } from 'ink-autocomplete';
 
 const fruits: Option[] = [
   { label: 'Apple', value: 'apple' },

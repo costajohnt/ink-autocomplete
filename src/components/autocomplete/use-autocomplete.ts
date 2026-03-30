@@ -30,7 +30,7 @@ export function useAutocomplete(opts: UseAutocompleteOptions) {
           state.focusedIndex < state.filteredOptions.length
         ) {
           const focused = state.filteredOptions[state.focusedIndex]!;
-          dispatch({ type: 'SELECT', value: focused.option.value });
+          dispatch({ type: 'SELECT', value: focused.option.value, label: focused.option.label });
         }
         return;
       }
