@@ -4,6 +4,10 @@
 [![npm version](https://img.shields.io/npm/v/ink-combobox)](https://www.npmjs.com/package/ink-combobox)
 [![license](https://img.shields.io/npm/l/ink-combobox)](https://github.com/costajohnt/ink-combobox/blob/main/LICENSE)
 
+<img src="media/demo.gif" width="600">
+
+> **Note:** The npm package name is `ink-combobox`. Install with `npm install ink-combobox`.
+
 A combobox/fuzzy-search autocomplete input component for [Ink](https://github.com/vadimdemedes/ink). Provides a fully interactive dropdown with fuzzy matching, keyboard navigation, async data loading, and scroll indicators -- all inside your terminal.
 
 ## Features
