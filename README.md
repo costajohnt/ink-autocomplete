@@ -1,10 +1,12 @@
 # ink-combobox
 
-[![CI](https://github.com/costajohnt/ink-combobox/actions/workflows/ci.yml/badge.svg)](https://github.com/costajohnt/ink-combobox/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/ink-combobox)](https://www.npmjs.com/package/ink-combobox)
-[![license](https://img.shields.io/npm/l/ink-combobox)](https://github.com/costajohnt/ink-combobox/blob/main/LICENSE)
+[![CI](https://github.com/costajohnt/ink-autocomplete/actions/workflows/ci.yml/badge.svg)](https://github.com/costajohnt/ink-autocomplete/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/ink-combobox)](https://github.com/costajohnt/ink-autocomplete/blob/main/LICENSE)
 
-<img src="media/demo.gif" width="600">
+<p align="center">
+  <img src="media/demo.gif" alt="ink-combobox demo" width="600">
+</p>
 
 > **Note:** The npm package name is `ink-combobox`. Install with `npm install ink-combobox`.
 
@@ -300,8 +302,8 @@ import type {
 Contributions are welcome. Please open an issue to discuss larger changes before submitting a PR.
 
 ```bash
-git clone https://github.com/costajohnt/ink-combobox.git
-cd ink-combobox
+git clone https://github.com/costajohnt/ink-autocomplete.git
+cd ink-autocomplete
 npm install
 npm run build
 npm test
@@ -311,7 +313,7 @@ The test suite uses [vitest](https://vitest.dev/) with [ink-testing-library](htt
 
 ## Changelog
 
-This project does not yet maintain a formal CHANGELOG. See [GitHub Releases](https://github.com/costajohnt/ink-combobox/releases) for version history and release notes.
+See [GitHub Releases](https://github.com/costajohnt/ink-autocomplete/releases).
 
 ## License
 
