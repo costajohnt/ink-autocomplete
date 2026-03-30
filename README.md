@@ -1,8 +1,8 @@
-# ink-autocomplete
+# ink-combobox
 
-[![CI](https://github.com/costajohnt/ink-autocomplete/actions/workflows/ci.yml/badge.svg)](https://github.com/costajohnt/ink-autocomplete/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/ink-autocomplete)](https://www.npmjs.com/package/ink-autocomplete)
-[![license](https://img.shields.io/npm/l/ink-autocomplete)](https://github.com/costajohnt/ink-autocomplete/blob/main/LICENSE)
+[![CI](https://github.com/costajohnt/ink-combobox/actions/workflows/ci.yml/badge.svg)](https://github.com/costajohnt/ink-combobox/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/ink-combobox)](https://www.npmjs.com/package/ink-combobox)
+[![license](https://img.shields.io/npm/l/ink-combobox)](https://github.com/costajohnt/ink-combobox/blob/main/LICENSE)
 
 A combobox/fuzzy-search autocomplete input component for [Ink](https://github.com/vadimdemedes/ink). Provides a fully interactive dropdown with fuzzy matching, keyboard navigation, async data loading, and scroll indicators -- all inside your terminal.
 
@@ -21,7 +21,7 @@ A combobox/fuzzy-search autocomplete input component for [Ink](https://github.co
 ## Install
 
 ```
-npm install ink-autocomplete
+npm install ink-combobox
 ```
 
 Peer dependencies: `ink >= 5.0.0`, `react >= 18.0.0`, and `chalk >= 5.0.0`.
@@ -33,7 +33,7 @@ Peer dependencies: `ink >= 5.0.0`, `react >= 18.0.0`, and `chalk >= 5.0.0`.
 ```tsx
 import React from 'react';
 import { render } from 'ink';
-import { Autocomplete } from 'ink-autocomplete';
+import { Autocomplete } from 'ink-combobox';
 
 const fruits = [
   { label: 'Apple', value: 'apple' },
@@ -101,7 +101,7 @@ Each `Option` has the shape `{ label: string; value: string }`.
 Pass a function instead of an array to load options dynamically. The function receives the current query string and should return a promise that resolves to an array of `Option` objects. The provider is responsible for its own filtering -- the component will not re-filter the results, but it will compute match highlight ranges for display.
 
 ```tsx
-import { Autocomplete } from 'ink-autocomplete';
+import { Autocomplete } from 'ink-combobox';
 
 async function searchUsers(query: string) {
   const response = await fetch(`/api/users?q=${encodeURIComponent(query)}`);
@@ -150,7 +150,7 @@ Scores are normalized to a 0-1 range. Results are sorted by score descending, so
 The fuzzy matching utilities are exported for use outside the component:
 
 ```ts
-import { fuzzyMatch, fuzzyFilter, collapseIndices } from 'ink-autocomplete';
+import { fuzzyMatch, fuzzyFilter, collapseIndices } from 'ink-combobox';
 
 // Match a single query against a label
 const result = fuzzyMatch('gn', 'getName');
@@ -203,7 +203,7 @@ import {
   useAutocompleteState,
   useAutocomplete,
   AutocompleteOption,
-} from 'ink-autocomplete';
+} from 'ink-combobox';
 
 function CustomAutocomplete() {
   const options = useMemo(() => [
@@ -288,7 +288,7 @@ import type {
   UseAutocompleteOptions,
   UseAutocompleteStateOptions,
   Theme,
-} from 'ink-autocomplete';
+} from 'ink-combobox';
 ```
 
 ## Contributing
@@ -296,8 +296,8 @@ import type {
 Contributions are welcome. Please open an issue to discuss larger changes before submitting a PR.
 
 ```bash
-git clone https://github.com/costajohnt/ink-autocomplete.git
-cd ink-autocomplete
+git clone https://github.com/costajohnt/ink-combobox.git
+cd ink-combobox
 npm install
 npm run build
 npm test
@@ -307,7 +307,7 @@ The test suite uses [vitest](https://vitest.dev/) with [ink-testing-library](htt
 
 ## Changelog
 
-This project does not yet maintain a formal CHANGELOG. See [GitHub Releases](https://github.com/costajohnt/ink-autocomplete/releases) for version history and release notes.
+This project does not yet maintain a formal CHANGELOG. See [GitHub Releases](https://github.com/costajohnt/ink-combobox/releases) for version history and release notes.
 
 ## License
 
