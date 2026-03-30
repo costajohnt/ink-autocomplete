@@ -1,6 +1,6 @@
 {
   "name": "ink-autocomplete",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "description": "Combobox/fuzzy-search autocomplete input for Ink",
   "type": "module",
   "main": "./dist/index.js",
