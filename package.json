@@ -1,0 +1,50 @@
+{
+  "name": "ink-autocomplete",
+  "version": "0.1.0",
+  "description": "Combobox/fuzzy-search autocomplete input for Ink",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "ink",
+    "cli",
+    "autocomplete",
+    "combobox",
+    "fuzzy",
+    "search",
+    "react"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "ink": ">=5.0.0",
+    "react": ">=18.0.0"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "ink": "^5.1.0",
+    "ink-testing-library": "^4.0.0",
+    "react": "^18.3.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
