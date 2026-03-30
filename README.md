@@ -303,7 +303,7 @@ npm run build
 npm test
 ```
 
-The test suite uses [vitest](https://vitest.dev/) with [ink-testing-library](https://github.com/vadimdemedes/ink-testing-library). CI runs against Node 18, 20, and 22.
+The test suite uses [vitest](https://vitest.dev/) with [ink-testing-library](https://github.com/vadimdemedes/ink-testing-library). CI runs against Node 20 and 22.
 
 ## Changelog
 

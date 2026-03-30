@@ -322,6 +322,8 @@ export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
     ) {
       prevSelectedRef.current = state.selectedValue;
       onSelectRef.current?.(state.selectedValue);
+    } else if (state.selectedValue === null) {
+      prevSelectedRef.current = null;
     }
   }, [state.selectedValue]);
 

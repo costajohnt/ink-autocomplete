@@ -262,6 +262,32 @@ describe('Autocomplete', () => {
     expect(onSelect).toHaveBeenCalled();
   });
 
+  it('fires onSelect again when the same option is re-selected', async () => {
+    const onSelect = vi.fn();
+    const { stdin } = render(
+      <Autocomplete options={defaultOptions} onSelect={onSelect} />,
+    );
+    await delay(MOUNT_DELAY);
+
+    // First selection
+    stdin.write('apple');
+    await delay(RENDER_DELAY);
+    stdin.write('\r');
+    await delay(RENDER_DELAY);
+    expect(onSelect).toHaveBeenCalledTimes(1);
+
+    // Escape to clear, then re-type and re-select the same option
+    stdin.write('\x1B');
+    await delay(RENDER_DELAY);
+    stdin.write('apple');
+    await delay(RENDER_DELAY);
+
+    // Re-select the same option
+    stdin.write('\r');
+    await delay(RENDER_DELAY);
+    expect(onSelect).toHaveBeenCalledTimes(2);
+  });
+
   it('highlights matched characters', async () => {
     const { lastFrame, stdin } = render(
       <Autocomplete options={defaultOptions} />,
