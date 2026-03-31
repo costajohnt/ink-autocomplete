@@ -79,11 +79,11 @@ export function Autocomplete({
       flexDirection="column"
       aria-role="combobox"
       aria-state={{expanded: state.isOpen}}
-      aria-label={inputAriaLabel}
     >
+      {inputAriaLabel && <Text aria-label={inputAriaLabel}>{''}</Text>}
       {/* Input line */}
-      <Box aria-role="textbox" aria-label={placeholder || 'Search'}>
-        <Text>{theme.prefix(prefix)}{renderedInput}</Text>
+      <Box aria-role="textbox">
+        <Text aria-label={placeholder || 'Search'}>{theme.prefix(prefix)}{renderedInput}</Text>
       </Box>
 
       {/* Dropdown */}
@@ -92,12 +92,12 @@ export function Autocomplete({
           flexDirection="column"
           marginLeft={prefix.length}
           aria-role="listbox"
-          aria-label="Suggestions"
         >
+          <Text aria-label="Suggestions">{''}</Text>
           {/* Loading indicator */}
           {state.isLoading && (
-            <Box aria-role="timer" aria-state={{busy: true}} aria-label={loadingText}>
-              <Text>{theme.loading(loadingText)}</Text>
+            <Box aria-role="timer" aria-state={{busy: true}}>
+              <Text aria-label={loadingText}>{theme.loading(loadingText)}</Text>
             </Box>
           )}
 
