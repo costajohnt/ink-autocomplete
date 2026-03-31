@@ -71,19 +71,19 @@ export function Autocomplete({
     ? state.filteredOptions[state.focusedIndex]
     : undefined;
   const inputAriaLabel = isScreenReaderEnabled && focusedOption
-    ? `${focusedOption.option.label}, ${state.focusedIndex + 1} of ${state.filteredOptions.length}`
+    ? focusedOption.option.label
     : undefined;
 
   return (
     <Box
       flexDirection="column"
       aria-role="combobox"
-      aria-state={{expanded: state.isOpen}}
+      aria-state={{expanded: state.isOpen, disabled: isDisabled}}
     >
       {inputAriaLabel && <Text aria-label={inputAriaLabel}>{''}</Text>}
       {/* Input line */}
       <Box aria-role="textbox">
-        <Text aria-label={placeholder || 'Search'}>{theme.prefix(prefix)}{renderedInput}</Text>
+        <Text aria-label={state.inputValue.length > 0 ? `${placeholder || 'Search'}: ${state.inputValue}` : (placeholder || 'Search')}>{theme.prefix(prefix)}{renderedInput}</Text>
       </Box>
 
       {/* Dropdown */}
@@ -96,14 +96,16 @@ export function Autocomplete({
           <Text aria-label="Suggestions">{''}</Text>
           {/* Loading indicator */}
           {state.isLoading && (
-            <Box aria-role="timer" aria-state={{busy: true}}>
+            <Box aria-role="progressbar" aria-state={{busy: true}}>
               <Text aria-label={loadingText}>{theme.loading(loadingText)}</Text>
             </Box>
           )}
 
           {/* Error message */}
           {!state.isLoading && displayError && (
-            <Text aria-label={displayError} color="red">{displayError}</Text>
+            <Box aria-role="timer" aria-state={{busy: false}}>
+              <Text aria-label={displayError} color="red">{displayError}</Text>
+            </Box>
           )}
 
           {/* No matches */}
