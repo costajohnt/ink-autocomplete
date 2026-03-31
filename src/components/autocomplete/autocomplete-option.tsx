@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, Box } from 'ink';
+import { Text, Box, useIsScreenReaderEnabled } from 'ink';
 import type { MatchRange } from '../../types.js';
 import { theme } from './theme.js';
 
@@ -7,19 +7,32 @@ export interface AutocompleteOptionProps {
   label: string;
   matchRanges: MatchRange[];
   isFocused: boolean;
+  index: number;
+  totalCount: number;
 }
 
 export function AutocompleteOption({
   label,
   matchRanges,
   isFocused,
+  index,
+  totalCount,
 }: AutocompleteOptionProps) {
+  const isScreenReaderEnabled = useIsScreenReaderEnabled();
   const pointer = isFocused ? theme.pointer() : theme.noPointer();
   const highlightedLabel = renderHighlightedLabel(label, matchRanges, isFocused);
+  const ariaLabel = isScreenReaderEnabled
+    ? `${label}, ${index + 1} of ${totalCount}`
+    : label;
 
   return (
-    <Box>
-      <Text>{pointer} {highlightedLabel}</Text>
+    <Box
+      aria-role="option"
+      aria-state={{selected: isFocused}}
+      aria-label={ariaLabel}
+    >
+      <Text aria-hidden>{pointer} </Text>
+      <Text>{highlightedLabel}</Text>
     </Box>
   );
 }
