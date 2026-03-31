@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/ink-combobox)](https://www.npmjs.com/package/ink-combobox)
 [![CI](https://github.com/costajohnt/ink-autocomplete/actions/workflows/ci.yml/badge.svg)](https://github.com/costajohnt/ink-autocomplete/actions/workflows/ci.yml)
-[![license](https://img.shields.io/npm/l/ink-combobox)](https://github.com/costajohnt/ink-autocomplete/blob/main/LICENSE)
+[![license](https://img.shields.io/npm/l/ink-combobox)](https://github.com/costajohnt/ink-autocomplete/blob/main/LICENSE) [![npm downloads](https://img.shields.io/npm/dw/ink-combobox.svg)](https://www.npmjs.com/package/ink-combobox)
 
 <p align="center">
   <img src="media/demo.gif" alt="ink-combobox demo" width="600">
