@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, Box } from 'ink';
+import { Text, Box, useIsScreenReaderEnabled } from 'ink';
 import { useAutocompleteState } from './use-autocomplete-state.js';
 import { useAutocomplete } from './use-autocomplete.js';
 import { AutocompleteOption } from './autocomplete-option.js';
@@ -66,24 +66,44 @@ export function Autocomplete({
     ? (errorText ?? state.error.message)
     : null;
 
+  const isScreenReaderEnabled = useIsScreenReaderEnabled();
+  const focusedOption = state.isOpen && state.filteredOptions.length > 0
+    ? state.filteredOptions[state.focusedIndex]
+    : undefined;
+  const inputAriaLabel = isScreenReaderEnabled && focusedOption
+    ? `${focusedOption.option.label}, ${state.focusedIndex + 1} of ${state.filteredOptions.length}`
+    : undefined;
+
   return (
-    <Box flexDirection="column">
+    <Box
+      flexDirection="column"
+      aria-role="combobox"
+      aria-state={{expanded: state.isOpen}}
+      aria-label={inputAriaLabel}
+    >
       {/* Input line */}
-      <Box>
+      <Box aria-role="textbox" aria-label={placeholder || 'Search'}>
         <Text>{theme.prefix(prefix)}{renderedInput}</Text>
       </Box>
 
       {/* Dropdown */}
       {state.isOpen && (
-        <Box flexDirection="column" marginLeft={prefix.length}>
+        <Box
+          flexDirection="column"
+          marginLeft={prefix.length}
+          aria-role="listbox"
+          aria-label="Suggestions"
+        >
           {/* Loading indicator */}
           {state.isLoading && (
-            <Text>{theme.loading(loadingText)}</Text>
+            <Box aria-role="timer" aria-state={{busy: true}} aria-label={loadingText}>
+              <Text>{theme.loading(loadingText)}</Text>
+            </Box>
           )}
 
           {/* Error message */}
           {!state.isLoading && displayError && (
-            <Text color="red">{displayError}</Text>
+            <Text aria-label={displayError} color="red">{displayError}</Text>
           )}
 
           {/* No matches */}
@@ -91,12 +111,12 @@ export function Autocomplete({
             !displayError &&
             state.filteredOptions.length === 0 &&
             state.inputValue.length > 0 && (
-              <Text>{theme.noMatches(noMatchesText)}</Text>
+              <Text aria-label={noMatchesText}>{theme.noMatches(noMatchesText)}</Text>
             )}
 
           {/* Scroll up indicator */}
           {!state.isLoading && !displayError && aboveCount > 0 && (
-            <Text>{theme.scrollIndicator(`\u2191 ${aboveCount} more`)}</Text>
+            <Text aria-hidden>{theme.scrollIndicator(`\u2191 ${aboveCount} more`)}</Text>
           )}
 
           {/* Options */}
@@ -110,13 +130,15 @@ export function Autocomplete({
                   label={match.option.label}
                   matchRanges={match.matchRanges}
                   isFocused={actualIndex === state.focusedIndex}
+                  index={actualIndex}
+                  totalCount={state.filteredOptions.length}
                 />
               );
             })}
 
           {/* Scroll down indicator */}
           {!state.isLoading && !displayError && belowCount > 0 && (
-            <Text>{theme.scrollIndicator(`\u2193 ${belowCount} more`)}</Text>
+            <Text aria-hidden>{theme.scrollIndicator(`\u2193 ${belowCount} more`)}</Text>
           )}
         </Box>
       )}
