@@ -29,10 +29,9 @@ export function AutocompleteOption({
     <Box
       aria-role="option"
       aria-state={{selected: isFocused}}
-      aria-label={ariaLabel}
     >
       <Text aria-hidden>{pointer} </Text>
-      <Text>{highlightedLabel}</Text>
+      <Text aria-label={ariaLabel}>{highlightedLabel}</Text>
     </Box>
   );
 }
