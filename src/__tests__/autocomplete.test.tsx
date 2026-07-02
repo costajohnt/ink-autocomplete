@@ -2,6 +2,8 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render } from 'ink-testing-library';
 import { Autocomplete } from '../components/autocomplete/autocomplete.js';
+import { createReducer } from '../components/autocomplete/use-autocomplete-state.js';
+import type { AutocompleteState } from '../components/autocomplete/use-autocomplete-state.js';
 import type { Option } from '../types.js';
 
 const defaultOptions: Option[] = [
@@ -17,6 +19,12 @@ const defaultOptions: Option[] = [
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Strip ANSI escape codes so text assertions don't break under FORCE_COLOR,
+// where chalk wraps substrings in codes that split words (e.g. 'Ban<esc>[22mana').
+const ANSI_PATTERN = new RegExp('\\u001B\\[[0-9;]*m', 'g');
+const clean = (frame: () => string | undefined): string =>
+  (frame() ?? '').replace(ANSI_PATTERN, '');
+
 // Wait for useEffect to register the stdin readable listener in ink
 const MOUNT_DELAY = 100;
 // Wait for state updates and re-render
@@ -28,7 +36,7 @@ describe('Autocomplete', () => {
       <Autocomplete options={defaultOptions} placeholder="Search fruits..." />,
     );
     await delay(MOUNT_DELAY);
-    const frame = lastFrame();
+    const frame = clean(lastFrame);
     expect(frame).toContain('Search fruits');
   });
 
@@ -37,7 +45,7 @@ describe('Autocomplete', () => {
       <Autocomplete options={defaultOptions} prefix="$ " />,
     );
     await delay(MOUNT_DELAY);
-    const frame = lastFrame();
+    const frame = clean(lastFrame);
     expect(frame).toContain('$');
   });
 
@@ -50,7 +58,7 @@ describe('Autocomplete', () => {
     stdin.write('a');
     await delay(RENDER_DELAY);
 
-    const frame = lastFrame();
+    const frame = clean(lastFrame);
     expect(frame).toContain('Apple');
   });
 
@@ -63,7 +71,7 @@ describe('Autocomplete', () => {
     stdin.write('ban');
     await delay(RENDER_DELAY);
 
-    const frame = lastFrame();
+    const frame = clean(lastFrame);
     expect(frame).toContain('Banana');
     expect(frame).not.toContain('Apple');
   });
@@ -81,7 +89,7 @@ describe('Autocomplete', () => {
     stdin.write('\x1B[B');
     await delay(RENDER_DELAY);
 
-    const frame = lastFrame();
+    const frame = clean(lastFrame);
     // Should show the dropdown with focus moved down
     expect(frame).toBeDefined();
     expect(frame).toContain('Apple');
@@ -120,7 +128,7 @@ describe('Autocomplete', () => {
 
     // onChange should have been called (first with 'app', then with the accepted label)
     expect(onChange).toHaveBeenCalled();
-    const frame = lastFrame();
+    const frame = clean(lastFrame);
     expect(frame).toBeDefined();
   });
 
@@ -134,14 +142,14 @@ describe('Autocomplete', () => {
     await delay(RENDER_DELAY);
 
     // Verify dropdown is open
-    let frame = lastFrame();
+    let frame = clean(lastFrame);
     expect(frame).toContain('Apple');
 
     // Press escape
     stdin.write('\x1B');
     await delay(RENDER_DELAY);
 
-    frame = lastFrame();
+    frame = clean(lastFrame);
     // After escape, input is cleared and dropdown closes
     expect(frame).not.toContain('Apple');
   });
@@ -155,14 +163,14 @@ describe('Autocomplete', () => {
     stdin.write('ban');
     await delay(RENDER_DELAY);
 
-    let frame = lastFrame();
+    let frame = clean(lastFrame);
     expect(frame).toContain('Banana');
 
     // Backspace (0x7F triggers key.delete in ink)
     stdin.write('\x7F');
     await delay(RENDER_DELAY);
 
-    frame = lastFrame();
+    frame = clean(lastFrame);
     // After deleting one char, input is "ba" - should still show Banana
     expect(frame).toContain('Banana');
   });
@@ -179,7 +187,7 @@ describe('Autocomplete', () => {
     stdin.write('zzzzz');
     await delay(RENDER_DELAY);
 
-    const frame = lastFrame();
+    const frame = clean(lastFrame);
     expect(frame).toContain('Nothing found');
   });
 
@@ -210,7 +218,7 @@ describe('Autocomplete', () => {
     stdin.write('a');
     await delay(RENDER_DELAY);
 
-    const frame = lastFrame();
+    const frame = clean(lastFrame);
     expect(frame).toBeDefined();
   });
 
@@ -228,7 +236,7 @@ describe('Autocomplete', () => {
     stdin.write('o');
     await delay(RENDER_DELAY);
 
-    const frame = lastFrame();
+    const frame = clean(lastFrame);
     expect(frame).toContain('\u2193');
     expect(frame).toContain('more');
   });
@@ -297,7 +305,7 @@ describe('Autocomplete', () => {
     stdin.write('app');
     await delay(RENDER_DELAY);
 
-    const frame = lastFrame();
+    const frame = clean(lastFrame);
     // The label should appear (with ANSI styling for highlights)
     expect(frame).toContain('Apple');
   });
@@ -318,7 +326,7 @@ describe('Autocomplete', () => {
     stdin.write('app');
     await delay(200);
 
-    const frame = lastFrame();
+    const frame = clean(lastFrame);
     expect(frame).toContain('Apple');
     expect(asyncProvider).toHaveBeenCalled();
   });
@@ -341,7 +349,7 @@ describe('Autocomplete', () => {
     stdin.write('a');
     await delay(RENDER_DELAY);
 
-    const frame = lastFrame();
+    const frame = clean(lastFrame);
     expect(frame).toContain('Searching...');
   });
 
@@ -361,7 +369,7 @@ describe('Autocomplete', () => {
     stdin.write('long');
     await delay(RENDER_DELAY);
 
-    const frame = lastFrame();
+    const frame = clean(lastFrame);
     expect(frame).toContain('long option label');
   });
 
@@ -380,7 +388,7 @@ describe('Autocomplete', () => {
     stdin.write('c');
     await delay(RENDER_DELAY);
 
-    const frame = lastFrame();
+    const frame = clean(lastFrame);
     expect(frame).toContain('C++');
   });
 
@@ -393,7 +401,7 @@ describe('Autocomplete', () => {
     stdin.write('a');
     await delay(RENDER_DELAY);
 
-    const frame = lastFrame();
+    const frame = clean(lastFrame);
     expect(frame).toContain('No items');
   });
 
@@ -417,7 +425,7 @@ describe('Autocomplete', () => {
     await delay(200);
 
     // Error message should be displayed
-    const frame = lastFrame();
+    const frame = clean(lastFrame);
     expect(frame).toContain('Network failure');
 
     // onError callback should have been called
@@ -432,7 +440,7 @@ describe('Autocomplete', () => {
     stdin.write('l');
     await delay(200);
 
-    const clearedFrame = lastFrame();
+    const clearedFrame = clean(lastFrame);
     // Error should be gone, replaced by results
     expect(clearedFrame).not.toContain('Network failure');
     expect(clearedFrame).toContain('Alpha');
@@ -449,7 +457,7 @@ describe('Autocomplete', () => {
     );
     await delay(MOUNT_DELAY);
 
-    const frame = lastFrame();
+    const frame = clean(lastFrame);
     // The input should show "ban" (the default value text is rendered)
     expect(frame).toContain('ban');
   });
@@ -465,7 +473,7 @@ describe('Autocomplete', () => {
     stdin.write('ban');
     await delay(RENDER_DELAY);
 
-    let frame = lastFrame();
+    let frame = clean(lastFrame);
     expect(frame).toContain('Banana');
 
     // Move cursor to the start (Ctrl+A)
@@ -477,7 +485,7 @@ describe('Autocomplete', () => {
     await delay(RENDER_DELAY);
 
     // After deleting first char, input is "an"
-    frame = lastFrame();
+    frame = clean(lastFrame);
     expect(frame).toBeDefined();
     // onChange should have been called with the result of the delete
     expect(onChange).toHaveBeenCalled();
@@ -506,5 +514,143 @@ describe('Autocomplete', () => {
     // Should have debounced: the provider still gets called for the initial
     // empty query useEffect, plus at least once for the typed input
     expect(asyncProvider).toHaveBeenCalled();
+  });
+
+  it('deletes an emoji as a single unit on backspace', async () => {
+    const onChange = vi.fn();
+    const { stdin } = render(
+      <Autocomplete options={defaultOptions} onChange={onChange} />,
+    );
+    await delay(MOUNT_DELAY);
+
+    stdin.write('😀');
+    await delay(RENDER_DELAY);
+
+    // One backspace should clear the whole emoji, not leave a lone surrogate.
+    stdin.write('\x7F');
+    await delay(RENDER_DELAY);
+
+    const last = onChange.mock.calls.at(-1)?.[0];
+    expect(last).toBe('');
+  });
+
+  it('deletes a ZWJ emoji sequence as one grapheme cluster', async () => {
+    const onChange = vi.fn();
+    const { stdin } = render(
+      <Autocomplete options={defaultOptions} onChange={onChange} />,
+    );
+    await delay(MOUNT_DELAY);
+
+    // Family emoji: 👨 ZWJ 👩 ZWJ 👧 — one grapheme, five code points.
+    stdin.write('👨‍👩‍👧');
+    await delay(RENDER_DELAY);
+
+    stdin.write('\x7F');
+    await delay(RENDER_DELAY);
+
+    const last = onChange.mock.calls.at(-1)?.[0];
+    expect(last).toBe('');
+  });
+
+  it('cursor-left lands on a grapheme boundary, never mid-glyph', async () => {
+    const onChange = vi.fn();
+    const { stdin } = render(
+      <Autocomplete options={defaultOptions} onChange={onChange} />,
+    );
+    await delay(MOUNT_DELAY);
+
+    stdin.write('a😀');
+    await delay(RENDER_DELAY);
+
+    // Left arrow moves the cursor before the emoji (not into its surrogate pair).
+    stdin.write('\x1B[D');
+    await delay(RENDER_DELAY);
+
+    // Forward delete (Ctrl+D) removes the whole emoji, leaving just "a".
+    stdin.write('\x04');
+    await delay(RENDER_DELAY);
+
+    const last = onChange.mock.calls.at(-1)?.[0];
+    expect(last).toBe('a');
+  });
+
+  it('does not re-fetch or fire onError after selecting an async option', async () => {
+    const asyncProvider = vi.fn(async (query: string): Promise<Option[]> => {
+      // A re-filter with the selected label would throw and surface a spurious error.
+      if (query === 'Apple') throw new Error('should not re-fetch after select');
+      return [{ label: 'Apple', value: 'apple' }];
+    });
+    const onError = vi.fn();
+
+    const { stdin } = render(
+      <Autocomplete options={asyncProvider} debounceMs={0} onError={onError} />,
+    );
+    await delay(MOUNT_DELAY);
+
+    stdin.write('app');
+    await delay(200);
+    expect(asyncProvider).toHaveBeenCalled();
+
+    const callsBefore = asyncProvider.mock.calls.length;
+
+    // Select the focused option (Apple) with enter.
+    stdin.write('\r');
+    await delay(200);
+
+    expect(asyncProvider.mock.calls.length).toBe(callsBefore);
+    expect(asyncProvider).not.toHaveBeenCalledWith('Apple');
+    expect(onError).not.toHaveBeenCalled();
+  });
+});
+
+const makeState = (
+  overrides: Partial<AutocompleteState> = {},
+): AutocompleteState => ({
+  inputValue: '',
+  cursorOffset: 0,
+  isOpen: true,
+  filteredOptions: [],
+  focusedIndex: 0,
+  visibleFromIndex: 0,
+  visibleToIndex: 0,
+  selectedValue: null,
+  isLoading: false,
+  error: null,
+  skipFilter: false,
+  ...overrides,
+});
+
+describe('reducer DELETE_FORWARD', () => {
+  it('resets the scroll window when it empties the input', () => {
+    const reducer = createReducer(3);
+    const next = reducer(
+      makeState({
+        inputValue: 'a',
+        cursorOffset: 0,
+        visibleFromIndex: 5,
+        visibleToIndex: 8,
+      }),
+      { type: 'DELETE_FORWARD' },
+    );
+    expect(next.inputValue).toBe('');
+    expect(next.isOpen).toBe(false);
+    expect(next.visibleFromIndex).toBe(0);
+    expect(next.visibleToIndex).toBe(0);
+  });
+
+  it('leaves the scroll window intact when the input is not emptied', () => {
+    const reducer = createReducer(3);
+    const next = reducer(
+      makeState({
+        inputValue: 'abc',
+        cursorOffset: 0,
+        visibleFromIndex: 2,
+        visibleToIndex: 5,
+      }),
+      { type: 'DELETE_FORWARD' },
+    );
+    expect(next.inputValue).toBe('bc');
+    expect(next.visibleFromIndex).toBe(2);
+    expect(next.visibleToIndex).toBe(5);
   });
 });
