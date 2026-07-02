@@ -28,26 +28,39 @@ const clean = (frame: () => string | undefined): string =>
 // Poll a predicate until it holds, instead of sleeping a fixed amount and hoping
 // Ink has re-rendered. Fixed sleeps raced Ink's render/effect scheduling and
 // made the suite flaky; polling waits exactly as long as needed, no longer.
+//
+// After the predicate first holds we yield one more tick: Ink's useInput
+// re-subscribes its handler (carrying the latest state) in a *passive* effect
+// that runs after the frame commit. Returning the instant the frame shows the
+// expected content would let a subsequent keypress hit the previous handler
+// closure (e.g. empty filteredOptions) and be dropped.
 const waitFor = async (
   predicate: () => boolean,
-  { timeout = 3000, interval = 10 }: { timeout?: number; interval?: number } = {},
+  { timeout = 3000, interval = 15 }: { timeout?: number; interval?: number } = {},
 ): Promise<void> => {
   const start = Date.now();
-  while (Date.now() - start < timeout) {
+  const check = () => {
     try {
-      if (predicate()) return;
+      return predicate();
     } catch {
-      /* predicate may throw before the component is ready */
+      return false;
+    }
+  };
+  while (Date.now() - start < timeout) {
+    if (check()) {
+      await delay(interval); // let post-commit passive effects flush
+      return;
     }
     await delay(interval);
   }
-  try {
-    if (predicate()) return;
-  } catch {
-    /* fall through to the timeout error */
-  }
+  if (check()) return;
   throw new Error(`waitFor: condition not met within ${timeout}ms`);
 };
+
+// Give Ink a beat to commit a dispatch and re-subscribe its input handler before
+// sending a second key that depends on the first (e.g. move-cursor then delete);
+// there's no rendered signal for cursor position to poll on.
+const settle = () => delay(40);
 
 type Stdin = ReturnType<typeof render>['stdin'];
 
@@ -448,8 +461,9 @@ describe('Autocomplete', () => {
     stdin.write('ban');
     await waitForText(lastFrame, 'Banana');
 
-    // Move cursor to the start (Ctrl+A), then forward delete (Ctrl+D).
+    // Move cursor to the start (Ctrl+A), let it commit, then forward delete (Ctrl+D).
     stdin.write('\x01');
+    await settle();
     stdin.write('\x04');
 
     // After deleting the first char, input is "an"
@@ -518,6 +532,7 @@ describe('Autocomplete', () => {
     // Left arrow moves the cursor before the emoji (not into its surrogate
     // pair); forward delete (Ctrl+D) then removes the whole emoji, leaving "a".
     stdin.write('\x1B[D');
+    await settle();
     stdin.write('\x04');
     await waitFor(() => onChange.mock.calls.at(-1)?.[0] === 'a');
   });
