@@ -50,7 +50,14 @@ function clampVisible(
   }
 
   let from = visibleFromIndex;
-  let to = visibleToIndex;
+  // Establish a full-height window. The initial/reset window is [0, 0]; without
+  // this, the branch below would compute from = to - visibleCount = -2 on first
+  // open, and slice() with a negative start rendered zero options under a
+  // "N more" indicator.
+  let to =
+    visibleToIndex - visibleFromIndex === visibleCount
+      ? visibleToIndex
+      : from + visibleCount;
 
   if (focusedIndex < from) {
     from = focusedIndex;
@@ -58,6 +65,16 @@ function clampVisible(
   } else if (focusedIndex >= to) {
     to = focusedIndex + 1;
     from = to - visibleCount;
+  }
+
+  // Keep the window within bounds regardless of the entry state.
+  if (from < 0) {
+    from = 0;
+    to = visibleCount;
+  }
+  if (to > totalCount) {
+    to = totalCount;
+    from = totalCount - visibleCount;
   }
 
   return { visibleFromIndex: from, visibleToIndex: to };
@@ -76,8 +93,12 @@ export function createReducer(visibleOptionCount: number) {
         return {
           ...state,
           inputValue: newValue,
-          // action.text is inserted whole, so advancing by its code-unit
-          // length keeps the cursor on a grapheme boundary.
+          // action.text is inserted whole, so advancing by its full code-unit
+          // length keeps the cursor on a grapheme boundary. (Caveat: if the
+          // inserted text combines with the following character — regional
+          // indicators, combining marks — the offset can momentarily land
+          // mid-cluster; it self-heals on the next grapheme-aware move and is
+          // not corrected here.)
           cursorOffset: state.cursorOffset + action.text.length,
           isOpen: true,
           focusedIndex: 0,
@@ -200,6 +221,10 @@ export function createReducer(visibleOptionCount: number) {
           cursorOffset: action.label.length,
           focusedIndex: 0,
           skipFilter: true,
+          // Clear any pending loading/error state from a fetch that was in
+          // flight at pick time (that fetch is invalidated in the effect).
+          isLoading: false,
+          error: null,
         };
       }
 
@@ -221,6 +246,11 @@ export function createReducer(visibleOptionCount: number) {
           focusedIndex: 0,
           selectedValue: null,
           skipFilter: true,
+          // Clear any pending loading/error state from a fetch that was in
+          // flight at accept time (that fetch is invalidated in the effect).
+          // Matters more than for SELECT because the dropdown stays open.
+          isLoading: false,
+          error: null,
         };
       }
 
@@ -375,7 +405,11 @@ export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
   useEffect(() => {
     // SELECT/ACCEPT set inputValue programmatically; don't re-filter (which
     // would fire a redundant async fetch and, if it rejects, a spurious error).
+    // Also bump the request counter so any fetch already in flight at pick time
+    // is discarded when it settles (its stale result can't overwrite the picked
+    // value, and a rejection can't surface a spurious error).
     if (state.skipFilter) {
+      requestCounterRef.current++;
       return;
     }
 
