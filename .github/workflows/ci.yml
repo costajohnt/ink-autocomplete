@@ -24,4 +24,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npx tsc --noEmit
+      # xo crashes under Node 20 (bundled eslint-plugin-ava bug), so lint runs on Node 22 only.
+      - run: npm run lint
+        if: matrix.node-version == 22
       - run: npm test

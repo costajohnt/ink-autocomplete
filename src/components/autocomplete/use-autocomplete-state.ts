@@ -1,5 +1,6 @@
 import { useReducer, useEffect, useRef, useMemo } from 'react';
 import { fuzzyFilter, fuzzyMatch, collapseIndices } from '../../fuzzy.js';
+import { prevGraphemeOffset, nextGraphemeOffset } from './text.js';
 import type { Option, FuzzyMatch, OptionsSource, AsyncOptionsProvider } from '../../types.js';
 
 // --- State ---
@@ -14,6 +15,9 @@ export interface AutocompleteState {
   selectedValue: string | null;
   isLoading: boolean;
   error: Error | null;
+  // Set by SELECT/ACCEPT so the filtering effect skips the programmatic
+  // inputValue change and does not re-fetch (or spuriously error) after a pick.
+  skipFilter: boolean;
 }
 
 // --- Actions ---
@@ -46,7 +50,14 @@ function clampVisible(
   }
 
   let from = visibleFromIndex;
-  let to = visibleToIndex;
+  // Establish a full-height window. The initial/reset window is [0, 0]; without
+  // this, the branch below would compute from = to - visibleCount = -2 on first
+  // open, and slice() with a negative start rendered zero options under a
+  // "N more" indicator.
+  let to =
+    visibleToIndex - visibleFromIndex === visibleCount
+      ? visibleToIndex
+      : from + visibleCount;
 
   if (focusedIndex < from) {
     from = focusedIndex;
@@ -56,10 +67,20 @@ function clampVisible(
     from = to - visibleCount;
   }
 
+  // Keep the window within bounds regardless of the entry state.
+  if (from < 0) {
+    from = 0;
+    to = visibleCount;
+  }
+  if (to > totalCount) {
+    to = totalCount;
+    from = totalCount - visibleCount;
+  }
+
   return { visibleFromIndex: from, visibleToIndex: to };
 }
 
-function createReducer(visibleOptionCount: number) {
+export function createReducer(visibleOptionCount: number) {
   return function reducer(
     state: AutocompleteState,
     action: AutocompleteAction,
@@ -72,28 +93,37 @@ function createReducer(visibleOptionCount: number) {
         return {
           ...state,
           inputValue: newValue,
+          // action.text is inserted whole, so advancing by its full code-unit
+          // length keeps the cursor on a grapheme boundary. (Caveat: if the
+          // inserted text combines with the following character — regional
+          // indicators, combining marks — the offset can momentarily land
+          // mid-cluster; it self-heals on the next grapheme-aware move and is
+          // not corrected here.)
           cursorOffset: state.cursorOffset + action.text.length,
           isOpen: true,
           focusedIndex: 0,
           selectedValue: null,
           error: null,
+          skipFilter: false,
         };
       }
 
       case 'DELETE_BACKWARD': {
         if (state.cursorOffset === 0) return state;
-        const before = state.inputValue.slice(0, state.cursorOffset - 1);
+        const start = prevGraphemeOffset(state.inputValue, state.cursorOffset);
+        const before = state.inputValue.slice(0, start);
         const after = state.inputValue.slice(state.cursorOffset);
         const newValue = before + after;
         const willClose = newValue.length === 0;
         return {
           ...state,
           inputValue: newValue,
-          cursorOffset: state.cursorOffset - 1,
+          cursorOffset: start,
           isOpen: !willClose,
           focusedIndex: 0,
           selectedValue: null,
           error: null,
+          skipFilter: false,
           visibleFromIndex: willClose ? 0 : state.visibleFromIndex,
           visibleToIndex: willClose ? 0 : state.visibleToIndex,
         };
@@ -101,27 +131,38 @@ function createReducer(visibleOptionCount: number) {
 
       case 'DELETE_FORWARD': {
         if (state.cursorOffset >= state.inputValue.length) return state;
+        const end = nextGraphemeOffset(state.inputValue, state.cursorOffset);
         const before = state.inputValue.slice(0, state.cursorOffset);
-        const after = state.inputValue.slice(state.cursorOffset + 1);
+        const after = state.inputValue.slice(end);
         const newValue = before + after;
+        const willClose = newValue.length === 0;
         return {
           ...state,
           inputValue: newValue,
-          isOpen: newValue.length > 0,
+          isOpen: !willClose,
           focusedIndex: 0,
           selectedValue: null,
           error: null,
+          skipFilter: false,
+          visibleFromIndex: willClose ? 0 : state.visibleFromIndex,
+          visibleToIndex: willClose ? 0 : state.visibleToIndex,
         };
       }
 
       case 'MOVE_CURSOR_LEFT': {
         if (state.cursorOffset === 0) return state;
-        return { ...state, cursorOffset: state.cursorOffset - 1 };
+        return {
+          ...state,
+          cursorOffset: prevGraphemeOffset(state.inputValue, state.cursorOffset),
+        };
       }
 
       case 'MOVE_CURSOR_RIGHT': {
         if (state.cursorOffset >= state.inputValue.length) return state;
-        return { ...state, cursorOffset: state.cursorOffset + 1 };
+        return {
+          ...state,
+          cursorOffset: nextGraphemeOffset(state.inputValue, state.cursorOffset),
+        };
       }
 
       case 'MOVE_CURSOR_START': {
@@ -179,6 +220,11 @@ function createReducer(visibleOptionCount: number) {
           inputValue: action.label,
           cursorOffset: action.label.length,
           focusedIndex: 0,
+          skipFilter: true,
+          // Clear any pending loading/error state from a fetch that was in
+          // flight at pick time (that fetch is invalidated in the effect).
+          isLoading: false,
+          error: null,
         };
       }
 
@@ -199,6 +245,12 @@ function createReducer(visibleOptionCount: number) {
           isOpen: true,
           focusedIndex: 0,
           selectedValue: null,
+          skipFilter: true,
+          // Clear any pending loading/error state from a fetch that was in
+          // flight at accept time (that fetch is invalidated in the effect).
+          // Matters more than for SELECT because the dropdown stays open.
+          isLoading: false,
+          error: null,
         };
       }
 
@@ -286,6 +338,7 @@ export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
     selectedValue: null,
     isLoading: false,
     error: null,
+    skipFilter: false,
   };
 
   const reducer = useMemo(
@@ -350,6 +403,16 @@ export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    // SELECT/ACCEPT set inputValue programmatically; don't re-filter (which
+    // would fire a redundant async fetch and, if it rejects, a spurious error).
+    // Also bump the request counter so any fetch already in flight at pick time
+    // is discarded when it settles (its stale result can't overwrite the picked
+    // value, and a rejection can't surface a spurious error).
+    if (state.skipFilter) {
+      requestCounterRef.current++;
+      return;
+    }
+
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
@@ -400,8 +463,7 @@ export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
         clearTimeout(debounceTimerRef.current);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.inputValue, stableOptions, isAsync, effectiveDebounce]);
+  }, [state.inputValue, state.skipFilter, stableOptions, isAsync, effectiveDebounce]);
 
   return { state, dispatch };
 }
