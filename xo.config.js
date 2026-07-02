@@ -78,6 +78,8 @@ const xoConfig = [
 		files: ['src/__tests__/**'],
 		rules: {
 			'no-control-regex': 'off',
+			// The poll-until helper intentionally awaits inside its loop.
+			'no-await-in-loop': 'off',
 			// The ANSI-stripping regex is built via RegExp to avoid embedding a
 			// raw ESC control byte in a literal.
 			'prefer-regex-literals': 'off',
