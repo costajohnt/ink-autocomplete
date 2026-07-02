@@ -6,6 +6,12 @@ import { AutocompleteOption } from './autocomplete-option.js';
 import { theme } from './theme.js';
 import type { OptionsSource } from '../../types.js';
 
+// Ink's aria-role type doesn't include 'alert', but its renderer honors any
+// role string (it prefixes screen-reader output with `${role}: `). 'alert' is
+// the correct WAI-ARIA role for an error message; 'timer' wrongly implied a
+// live countdown.
+const alertRole = { 'aria-role': 'alert' } as unknown as React.ComponentProps<typeof Box>;
+
 export interface AutocompleteProps {
   options: OptionsSource;
   placeholder?: string;
@@ -103,7 +109,7 @@ export function Autocomplete({
 
           {/* Error message */}
           {!state.isLoading && displayError && (
-            <Box aria-role="timer" aria-state={{busy: false}}>
+            <Box {...alertRole}>
               <Text aria-label={displayError} color="red">{displayError}</Text>
             </Box>
           )}

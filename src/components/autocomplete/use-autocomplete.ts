@@ -1,5 +1,6 @@
 import { useInput } from 'ink';
 import { theme } from './theme.js';
+import { graphemeSegments } from './text.js';
 import type { AutocompleteState, AutocompleteAction } from './use-autocomplete-state.js';
 
 export interface UseAutocompleteOptions {
@@ -124,12 +125,14 @@ function buildRenderedInput(
     return theme.cursor(' ');
   }
 
+  // Render grapheme-by-grapheme so the cursor highlights a whole cluster
+  // (emoji, surrogate pairs, ZWJ sequences) rather than a single code unit.
   let result = '';
-  for (let i = 0; i < value.length; i++) {
-    if (i === cursorOffset) {
-      result += theme.cursor(value[i]!);
+  for (const { segment, start } of graphemeSegments(value)) {
+    if (start === cursorOffset) {
+      result += theme.cursor(segment);
     } else {
-      result += theme.inputText(value[i]!);
+      result += theme.inputText(segment);
     }
   }
 
