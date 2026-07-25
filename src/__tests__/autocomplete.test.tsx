@@ -156,6 +156,24 @@ describe('Autocomplete', () => {
     expect(onSelect).toHaveBeenCalled();
   });
 
+  it('passes the full Option as the second onSelect argument', async () => {
+    const onSelect = vi.fn();
+    const { lastFrame, stdin } = render(
+      <Autocomplete options={defaultOptions} onSelect={onSelect} />,
+    );
+    await waitForReady(stdin);
+
+    stdin.write('app');
+    await waitForText(lastFrame, 'Apple');
+    stdin.write('\r');
+    await waitFor(() => onSelect.mock.calls.length > 0);
+
+    expect(onSelect).toHaveBeenCalledWith('apple', {
+      label: 'Apple',
+      value: 'apple',
+    });
+  });
+
   it('accepts with tab (fills input, keeps dropdown open)', async () => {
     const onChange = vi.fn();
     const { lastFrame, stdin } = render(

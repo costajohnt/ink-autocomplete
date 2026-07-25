@@ -4,7 +4,7 @@ import { useAutocompleteState } from './use-autocomplete-state.js';
 import { useAutocomplete } from './use-autocomplete.js';
 import { AutocompleteOption } from './autocomplete-option.js';
 import { theme } from './theme.js';
-import type { OptionsSource } from '../../types.js';
+import type { Option, OptionsSource } from '../../types.js';
 
 // Ink's aria-role type doesn't include 'alert', but its renderer honors any
 // role string (it prefixes screen-reader output with `${role}: `). 'alert' is
@@ -24,7 +24,7 @@ export interface AutocompleteProps {
   loadingText?: string;
   errorText?: string;
   onChange?: (value: string) => void;
-  onSelect?: (value: string) => void;
+  onSelect?: (value: string, option?: Option) => void;
   onError?: (error: Error) => void;
 }
 

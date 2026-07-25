@@ -13,6 +13,7 @@ export interface AutocompleteState {
   visibleFromIndex: number;
   visibleToIndex: number;
   selectedValue: string | null;
+  selectedOption: Option | null;
   isLoading: boolean;
   error: Error | null;
   // Set by SELECT/ACCEPT so the filtering effect skips the programmatic
@@ -103,6 +104,7 @@ export function createReducer(visibleOptionCount: number) {
           isOpen: true,
           focusedIndex: 0,
           selectedValue: null,
+          selectedOption: null,
           error: null,
           skipFilter: false,
         };
@@ -122,6 +124,7 @@ export function createReducer(visibleOptionCount: number) {
           isOpen: !willClose,
           focusedIndex: 0,
           selectedValue: null,
+          selectedOption: null,
           error: null,
           skipFilter: false,
           visibleFromIndex: willClose ? 0 : state.visibleFromIndex,
@@ -142,6 +145,7 @@ export function createReducer(visibleOptionCount: number) {
           isOpen: !willClose,
           focusedIndex: 0,
           selectedValue: null,
+          selectedOption: null,
           error: null,
           skipFilter: false,
           visibleFromIndex: willClose ? 0 : state.visibleFromIndex,
@@ -216,6 +220,7 @@ export function createReducer(visibleOptionCount: number) {
         return {
           ...state,
           selectedValue: action.value,
+          selectedOption: { value: action.value, label: action.label },
           isOpen: false,
           inputValue: action.label,
           cursorOffset: action.label.length,
@@ -245,6 +250,7 @@ export function createReducer(visibleOptionCount: number) {
           isOpen: true,
           focusedIndex: 0,
           selectedValue: null,
+          selectedOption: null,
           skipFilter: true,
           // Clear any pending loading/error state from a fetch that was in
           // flight at accept time (that fetch is invalidated in the effect).
@@ -262,6 +268,7 @@ export function createReducer(visibleOptionCount: number) {
           cursorOffset: 0,
           focusedIndex: 0,
           selectedValue: null,
+          selectedOption: null,
         };
       }
 
@@ -309,7 +316,7 @@ export interface UseAutocompleteStateOptions {
   visibleOptionCount?: number;
   debounceMs?: number;
   onChange?: (value: string) => void;
-  onSelect?: (value: string) => void;
+  onSelect?: (value: string, option?: Option) => void;
   onError?: (error: Error) => void;
 }
 
@@ -336,6 +343,7 @@ export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
     visibleFromIndex: 0,
     visibleToIndex: 0,
     selectedValue: null,
+          selectedOption: null,
     isLoading: false,
     error: null,
     skipFilter: false,
@@ -374,11 +382,14 @@ export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
       state.selectedValue !== prevSelectedRef.current
     ) {
       prevSelectedRef.current = state.selectedValue;
-      onSelectRef.current?.(state.selectedValue);
+      onSelectRef.current?.(
+        state.selectedValue,
+        state.selectedOption ?? undefined,
+      );
     } else if (state.selectedValue === null) {
       prevSelectedRef.current = null;
     }
-  }, [state.selectedValue]);
+  }, [state.selectedValue, state.selectedOption]);
 
   useEffect(() => {
     if (state.error !== null && state.error !== prevErrorRef.current) {

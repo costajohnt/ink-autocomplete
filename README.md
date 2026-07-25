@@ -79,7 +79,7 @@ The `<Autocomplete>` component accepts the following props:
 | `loadingText` | `string` | `'Loading...'` | Text shown while an async provider is fetching results |
 | `errorText` | `string` | `undefined` | Text shown when an async provider rejects. If not set, the error's `.message` is displayed |
 | `onChange` | `(value: string) => void` | -- | Called whenever the input value changes |
-| `onSelect` | `(value: string) => void` | -- | Called when the user selects an option (Enter key) |
+| `onSelect` | `(value: string, option?: Option) => void` | -- | Called when the user selects an option (Enter key); `option` is the full selected `Option` |
 | `onError` | `(error: Error) => void` | -- | Called when an async options provider rejects. The error is also exposed in state as `error` |
 
 Each `Option` has the shape `{ label: string; value: string }`.
@@ -90,8 +90,8 @@ Each `Option` has the shape `{ label: string; value: string }`.
 |-----|--------|
 | Any character | Appends to the input and opens the dropdown |
 | `Backspace` | Deletes the character before the cursor |
-| `Delete` | Deletes the character after the cursor |
-| `Ctrl+D` | Forward delete (alternative binding) |
+| `Delete` | Deletes the character before the cursor (macOS sends `0x7F` for the physical delete key) |
+| `Ctrl+D` | Deletes the character after the cursor (forward delete) |
 | `Left Arrow` | Moves cursor left |
 | `Right Arrow` | Moves cursor right |
 | `Ctrl+A` | Moves cursor to start of input |
