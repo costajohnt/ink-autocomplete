@@ -191,6 +191,37 @@ describe('Autocomplete', () => {
     expect(onChange).toHaveBeenCalled();
   });
 
+  it('enter after tab selects the accepted option, not the first row', async () => {
+    const onSelect = vi.fn();
+    const options: Option[] = [
+      { label: 'apple', value: 'apple' },
+      { label: 'banana', value: 'banana' },
+      { label: 'avocado', value: 'avocado' },
+    ];
+    const { lastFrame, stdin } = render(
+      <Autocomplete options={options} onSelect={onSelect} />,
+    );
+    await waitForReady(stdin);
+
+    stdin.write('a');
+    await waitForText(lastFrame, 'avocado');
+
+    // Move focus to the second row, then accept it with Tab.
+    stdin.write('\u001B[B');
+    await waitFor(() => /❯\s*avocado/.test(clean(lastFrame)));
+
+    stdin.write('\t');
+    await waitFor(() => clean(lastFrame).split('\n')[0]!.includes('avocado'));
+
+    stdin.write('\r');
+    await waitFor(() => onSelect.mock.calls.length > 0);
+
+    expect(onSelect).toHaveBeenCalledWith('avocado', {
+      label: 'avocado',
+      value: 'avocado',
+    });
+  });
+
   it('closes dropdown on escape', async () => {
     const { lastFrame, stdin } = render(
       <Autocomplete options={defaultOptions} />,
@@ -756,5 +787,27 @@ describe('reducer grapheme cursor math', () => {
     state = reducer(state, { type: 'DELETE_BACKWARD' });
     expect(state.inputValue).toBe('😀');
     expect(state.cursorOffset).toBe(2);
+  });
+});
+
+describe('reducer ACCEPT', () => {
+  it('keeps focus on the accepted option', () => {
+    const reducer = createReducer(5);
+    const filteredOptions = ['apple', 'avocado', 'banana'].map((label) => ({
+      option: { label, value: label },
+      score: 1,
+      matchRanges: [],
+    }));
+    const state = makeState({
+      inputValue: 'a',
+      cursorOffset: 1,
+      filteredOptions,
+      focusedIndex: 1,
+      visibleToIndex: 3,
+    });
+    const next = reducer(state, { type: 'ACCEPT' });
+    expect(next.inputValue).toBe('avocado');
+    expect(next.focusedIndex).toBe(1);
+    expect(next.filteredOptions[next.focusedIndex]!.option.value).toBe('avocado');
   });
 });
