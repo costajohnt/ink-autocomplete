@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4](https://github.com/costajohnt/ink-autocomplete/compare/v0.2.3...v0.2.4) (2026-10-10)
+
+
+### Bug Fixes
+
+* **deps:** patch dev dependency advisories ([#13](https://github.com/costajohnt/ink-autocomplete/issues/13)) ([9dfb291](https://github.com/costajohnt/ink-autocomplete/commit/9dfb2919055cff561c57cb0b48eb284f3c0161da))
+
 ## [0.2.3](https://github.com/costajohnt/ink-autocomplete/compare/v0.2.2...v0.2.3) (2026-10-10)
 
 
