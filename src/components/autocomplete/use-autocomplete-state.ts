@@ -248,7 +248,9 @@ export function createReducer(visibleOptionCount: number) {
           inputValue: label,
           cursorOffset: label.length,
           isOpen: true,
-          focusedIndex: 0,
+          // Keep focus on the accepted option. Filtering is skipped below, so
+          // the list is unchanged; resetting to 0 would make a following Enter
+          // select a different option than the one now shown in the input.
           selectedValue: null,
           selectedOption: null,
           skipFilter: true,
