@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0](https://github.com/costajohnt/ink-autocomplete/compare/v0.2.4...v1.0.0) (2026-10-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* requires Node.js 22 or later.
+
+### Features
+
+* require Node.js 22 ([#18](https://github.com/costajohnt/ink-autocomplete/issues/18)) ([e0cb330](https://github.com/costajohnt/ink-autocomplete/commit/e0cb330804134cf73cf24c6f6a2c60c83aad5551))
+
 ## [0.2.4](https://github.com/costajohnt/ink-autocomplete/compare/v0.2.3...v0.2.4) (2026-10-10)
 
 
