@@ -1,4 +1,3 @@
-import React from 'react';
 import { Text, Box, useIsScreenReaderEnabled } from 'ink';
 import type { MatchRange } from '../../types.js';
 import { theme } from './theme.js';
