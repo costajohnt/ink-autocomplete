@@ -6,48 +6,26 @@ import base from '@costajohnt/ink-config/xo';
 const xoConfig = [
 	...base,
 	{
-		// Rules this codebase does not satisfy yet under the shared config.
-		// Burn these down by fixing the code and deleting the line.
 		rules: {
-			'@stylistic/no-mixed-operators': 'off',
-			'@stylistic/no-mixed-spaces-and-tabs': 'off',
+			// AutocompleteState.selectedValue/selectedOption/error and fuzzyMatch() use `null` by design; switching to `undefined` changes the public API.
 			'@typescript-eslint/no-restricted-types': 'off',
-			'@typescript-eslint/strict-boolean-expressions': 'off',
-			'@typescript-eslint/switch-exhaustiveness-check': 'off',
-			'@typescript-eslint/use-unknown-in-catch-callback-variable': 'off',
+			// The reducer switches over every action, the input handler branches once per key, and the component renders conditional JSX per state; splitting them only scatters the logic.
 			complexity: 'off',
-			'func-names': 'off',
-			'jsx-a11y-x/aria-props': 'off',
-			'max-params': 'off',
+			// Latest-ref pattern (`onChangeRef.current = onChange`) and the options-stabilizing ref are deliberately updated during render; moving them into effects would change when callbacks and filtering see new values.
 			'react-hooks/refs': 'off',
-			'unicorn/name-replacements': 'off',
-			'unicorn/prefer-combined-guards': 'off',
-			'unicorn/prefer-export-from': 'off',
-			'unicorn/prefer-includes-over-repeated-comparisons': 'off',
+			// The two-argument `.then(onFulfilled, onRejected)` is deliberate: `.catch()` would also turn errors thrown by the success handler into SET_ERROR.
 			'unicorn/prefer-then-catch': 'off',
 		},
 	},
 	{
 		files: ['test/**', 'src/**/__tests__/**'],
 		rules: {
+			// The `waitFor` poll-until helper awaits in a loop by design.
 			'no-await-in-loop': 'off',
-			'prefer-regex-literals': 'off',
-			'regexp/no-control-character': 'off',
-			'unicorn/consistent-boolean-name': 'off',
+			// `__tests__` is the conventional Vitest/Jest test directory name.
 			'unicorn/filename-case': 'off',
+			// `Promise.withResolvers()` needs Node 22; CI still tests Node 20 (engines: >=20).
 			'unicorn/prefer-promise-with-resolvers': 'off',
-		},
-	},
-	{
-		files: ['**/*.md'],
-		rules: {
-			'markdown/fenced-code-language': 'off',
-		},
-	},
-	{
-		files: ['package.json'],
-		rules: {
-			'package-json/prefer-side-effects-field': 'off',
 		},
 	},
 ];

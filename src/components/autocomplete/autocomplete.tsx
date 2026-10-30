@@ -71,6 +71,7 @@ export function Autocomplete({
   const displayError = state.error
     ? (errorText ?? state.error.message)
     : null;
+  const hasError = displayError !== null && displayError !== '';
 
   const isScreenReaderEnabled = useIsScreenReaderEnabled();
   const focusedOption = state.isOpen && state.filteredOptions.length > 0
@@ -79,6 +80,7 @@ export function Autocomplete({
   const inputAriaLabel = isScreenReaderEnabled && focusedOption
     ? focusedOption.option.label
     : undefined;
+  const inputLabel = placeholder === '' ? 'Search' : placeholder;
 
   return (
     <Box
@@ -86,10 +88,10 @@ export function Autocomplete({
       aria-role="combobox"
       aria-state={{expanded: state.isOpen, disabled: isDisabled}}
     >
-      {inputAriaLabel && <Text aria-label={inputAriaLabel} />}
+      {inputAriaLabel !== undefined && inputAriaLabel !== '' && <Text aria-label={inputAriaLabel} />}
       {/* Input line */}
       <Box aria-role="textbox">
-        <Text aria-label={state.inputValue.length > 0 ? `${placeholder || 'Search'}: ${state.inputValue}` : (placeholder || 'Search')}>{theme.prefix(prefix)}{renderedInput}</Text>
+        <Text aria-label={state.inputValue.length > 0 ? `${inputLabel}: ${state.inputValue}` : inputLabel}>{theme.prefix(prefix)}{renderedInput}</Text>
       </Box>
 
       {/* Dropdown */}
@@ -108,44 +110,39 @@ export function Autocomplete({
           )}
 
           {/* Error message */}
-          {!state.isLoading && displayError && (
+          {!state.isLoading && hasError && (
             <Box {...alertRole}>
               <Text aria-label={displayError} color="red">{displayError}</Text>
             </Box>
           )}
 
           {/* No matches */}
-          {!state.isLoading &&
-          	!displayError &&
-          	state.filteredOptions.length === 0 &&
-          	state.inputValue.length > 0 && (
+          {!state.isLoading && !hasError && state.filteredOptions.length === 0 && state.inputValue.length > 0 && (
             <Text aria-label={noMatchesText}>{theme.noMatches(noMatchesText)}</Text>
           )}
 
           {/* Scroll up indicator */}
-          {!state.isLoading && !displayError && aboveCount > 0 && (
+          {!state.isLoading && !hasError && aboveCount > 0 && (
             <Text aria-hidden>{theme.scrollIndicator(`\u{2191} ${aboveCount} more`)}</Text>
           )}
 
           {/* Options */}
-          {!state.isLoading &&
-          	!displayError &&
-          	visibleOptions.map((match, i) => {
-          	  const actualIndex = state.visibleFromIndex + i;
-          	  return (
-          	    <AutocompleteOption
-          	      key={match.option.value}
-          	      label={match.option.label}
-          	      matchRanges={match.matchRanges}
-          	      isFocused={actualIndex === state.focusedIndex}
-          	      index={actualIndex}
-          	      totalCount={state.filteredOptions.length}
-          	    />
-          	  );
-          	})}
+          {!state.isLoading && !hasError && visibleOptions.map((match, i) => {
+            const actualIndex = state.visibleFromIndex + i;
+            return (
+              <AutocompleteOption
+                key={match.option.value}
+                label={match.option.label}
+                matchRanges={match.matchRanges}
+                isFocused={actualIndex === state.focusedIndex}
+                index={actualIndex}
+                totalCount={state.filteredOptions.length}
+              />
+            );
+          })}
 
           {/* Scroll down indicator */}
-          {!state.isLoading && !displayError && belowCount > 0 && (
+          {!state.isLoading && !hasError && belowCount > 0 && (
             <Text aria-hidden>{theme.scrollIndicator(`\u{2193} ${belowCount} more`)}</Text>
           )}
         </Box>

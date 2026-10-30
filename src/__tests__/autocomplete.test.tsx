@@ -1,3 +1,4 @@
+import {stripVTControlCharacters} from 'node:util';
 import React from 'react';
 import {
   describe,
@@ -25,9 +26,8 @@ const delay = async (ms: number) => new Promise(resolve => setTimeout(resolve, m
 
 // Strip ANSI escape codes so text assertions don't break under FORCE_COLOR,
 // where chalk wraps substrings in codes that split words (e.g. 'Ban<esc>[22mana').
-const ANSI_PATTERN = new RegExp(String.raw`\u001B\[[0-9;]*m`, 'g');
 const clean = (frame: () => string | undefined): string =>
-  (frame() ?? '').replaceAll(ANSI_PATTERN, '');
+  stripVTControlCharacters(frame() ?? '');
 
 // Poll a predicate until it holds, instead of sleeping a fixed amount and hoping
 // Ink has re-rendered. Fixed sleeps raced Ink's render/effect scheduling and
@@ -39,13 +39,13 @@ const clean = (frame: () => string | undefined): string =>
 // expected content would let a subsequent keypress hit the previous handler
 // closure (e.g. empty filteredOptions) and be dropped.
 const waitFor = async (
-  predicate: () => boolean,
+  isConditionMet: () => boolean,
   {timeout = 3000, interval = 15}: {timeout?: number; interval?: number} = {},
 ): Promise<void> => {
   const start = Date.now();
   const check = () => {
     try {
-      return predicate();
+      return isConditionMet();
     } catch {
       return false;
     }
@@ -80,19 +80,19 @@ type Stdin = ReturnType<typeof render>['stdin'];
 const waitForReady = async (stdin: Stdin): Promise<void> =>
   waitFor(() => stdin.listenerCount('readable') > 0);
 
-const frameHas = (lastFrame: () => string | undefined, text: string): boolean =>
+const hasFrameText = (lastFrame: () => string | undefined, text: string): boolean =>
   clean(lastFrame).includes(text);
 const waitForText = async (
   lastFrame: () => string | undefined,
   text: string,
-): Promise<void> => waitFor(() => frameHas(lastFrame, text));
+): Promise<void> => waitFor(() => hasFrameText(lastFrame, text));
 
 function makeDeferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (reason?: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
   });
   return {promise, resolve, reject};
 }
@@ -130,7 +130,7 @@ describe('Autocomplete', () => {
 
     stdin.write('ban');
     await waitFor(
-      () => frameHas(lastFrame, 'Banana') && !frameHas(lastFrame, 'Apple'),
+      () => hasFrameText(lastFrame, 'Banana') && !hasFrameText(lastFrame, 'Apple'),
     );
   });
 
@@ -243,7 +243,7 @@ describe('Autocomplete', () => {
 
     // Press escape: input is cleared and dropdown closes
     stdin.write('\u{1B}');
-    await waitFor(() => !frameHas(lastFrame, 'Apple'));
+    await waitFor(() => !hasFrameText(lastFrame, 'Apple'));
   });
 
   it('handles backspace', async () => {
@@ -259,7 +259,7 @@ describe('Autocomplete', () => {
     // lowercase echo of "ban" disappears while Banana still matches.
     stdin.write('\u{7F}');
     await waitFor(
-      () => !frameHas(lastFrame, 'ban') && frameHas(lastFrame, 'Banana'),
+      () => !hasFrameText(lastFrame, 'ban') && hasFrameText(lastFrame, 'Banana'),
     );
   });
 
@@ -299,13 +299,13 @@ describe('Autocomplete', () => {
     stdin.write('a');
     await waitFor(
       () =>
-        frameHas(lastFrame, 'Apple') &&
-        frameHas(lastFrame, 'Application') &&
-        frameHas(lastFrame, 'Banana') &&
-        frameHas(lastFrame, 'more'),
+        hasFrameText(lastFrame, 'Apple') &&
+        hasFrameText(lastFrame, 'Application') &&
+        hasFrameText(lastFrame, 'Banana') &&
+        hasFrameText(lastFrame, 'more'),
     );
     // The 4th match must not be in the 3-row window.
-    expect(frameHas(lastFrame, 'Date')).toBe(false);
+    expect(hasFrameText(lastFrame, 'Date')).toBe(false);
   });
 
   it('shows scroll indicators', async () => {
@@ -321,7 +321,7 @@ describe('Autocomplete', () => {
 
     stdin.write('o');
     await waitFor(
-      () => frameHas(lastFrame, '↓') && frameHas(lastFrame, 'more'),
+      () => hasFrameText(lastFrame, '↓') && hasFrameText(lastFrame, 'more'),
     );
   });
 
@@ -369,7 +369,7 @@ describe('Autocomplete', () => {
 
     // Escape to clear, then re-type and re-select the same option
     stdin.write('\u{1B}');
-    await waitFor(() => !frameHas(lastFrame, 'Apple'));
+    await waitFor(() => !hasFrameText(lastFrame, 'Apple'));
     stdin.write('apple');
     await waitForText(lastFrame, 'Apple');
 
@@ -497,7 +497,7 @@ describe('Autocomplete', () => {
     stdin.write('l');
     await waitFor(
       () =>
-        !frameHas(lastFrame, 'Network failure') && frameHas(lastFrame, 'Alpha'),
+        !hasFrameText(lastFrame, 'Network failure') && hasFrameText(lastFrame, 'Alpha'),
     );
   });
 
@@ -717,7 +717,7 @@ describe('Autocomplete', () => {
 
     // Select the focused option.
     stdin.write('\r');
-    await waitFor(() => !frameHas(lastFrame, 'Application'));
+    await waitFor(() => !hasFrameText(lastFrame, 'Application'));
     const callsBefore = asyncProvider.mock.calls.length;
 
     // Typing after a selection must resume filtering (skipFilter isn't stuck).

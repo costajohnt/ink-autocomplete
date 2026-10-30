@@ -23,7 +23,7 @@ function graphemeBoundaries(value: string): number[] {
 /**
 Offset of the grapheme boundary immediately before `offset`.
 */
-export function prevGraphemeOffset(value: string, offset: number): number {
+export function previousGraphemeOffset(value: string, offset: number): number {
   const boundaries = graphemeBoundaries(value);
   let previous = 0;
   for (const boundary of boundaries) {
