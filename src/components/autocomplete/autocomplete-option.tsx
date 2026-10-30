@@ -1,14 +1,14 @@
-import { Text, Box, useIsScreenReaderEnabled } from 'ink';
-import type { MatchRange } from '../../types.js';
-import { theme } from './theme.js';
+import {Text, Box, useIsScreenReaderEnabled} from 'ink';
+import type {MatchRange} from '../../types.js';
+import {theme} from './theme.js';
 
-export interface AutocompleteOptionProps {
+export type AutocompleteOptionProps = {
   label: string;
   matchRanges: MatchRange[];
   isFocused: boolean;
   index: number;
   totalCount: number;
-}
+};
 
 export function AutocompleteOption({
   label,

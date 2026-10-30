@@ -1,11 +1,11 @@
-import { describe, it, expect } from 'vitest';
-import { fuzzyMatch, fuzzyFilter, collapseIndices } from '../fuzzy.js';
+import {describe, it, expect} from 'vitest';
+import {fuzzyMatch, fuzzyFilter, collapseIndices} from '../fuzzy.js';
 
 describe('collapseIndices', () => {
   it('collapses contiguous indices into ranges', () => {
     expect(collapseIndices([0, 1, 2, 5, 6])).toEqual([
-      { start: 0, end: 3 },
-      { start: 5, end: 7 },
+      {start: 0, end: 3},
+      {start: 5, end: 7},
     ]);
   });
 
@@ -14,18 +14,18 @@ describe('collapseIndices', () => {
   });
 
   it('handles single index', () => {
-    expect(collapseIndices([3])).toEqual([{ start: 3, end: 4 }]);
+    expect(collapseIndices([3])).toEqual([{start: 3, end: 4}]);
   });
 
   it('handles all contiguous', () => {
-    expect(collapseIndices([0, 1, 2, 3])).toEqual([{ start: 0, end: 4 }]);
+    expect(collapseIndices([0, 1, 2, 3])).toEqual([{start: 0, end: 4}]);
   });
 
   it('handles all non-contiguous', () => {
     expect(collapseIndices([0, 2, 4])).toEqual([
-      { start: 0, end: 1 },
-      { start: 2, end: 3 },
-      { start: 4, end: 5 },
+      {start: 0, end: 1},
+      {start: 2, end: 3},
+      {start: 4, end: 5},
     ]);
   });
 });
@@ -101,8 +101,8 @@ describe('fuzzyMatch', () => {
     expect(result).not.toBeNull();
     const ranges = collapseIndices(result!.matchedIndices);
     expect(ranges).toEqual([
-      { start: 0, end: 1 },
-      { start: 6, end: 7 },
+      {start: 0, end: 1},
+      {start: 6, end: 7},
     ]);
   });
 
@@ -124,11 +124,11 @@ describe('fuzzyMatch', () => {
 
 describe('fuzzyFilter', () => {
   const options = [
-    { label: 'apple', value: 'apple' },
-    { label: 'application', value: 'application' },
-    { label: 'banana', value: 'banana' },
-    { label: 'grape', value: 'grape' },
-    { label: 'grapefruit', value: 'grapefruit' },
+    {label: 'apple', value: 'apple'},
+    {label: 'application', value: 'application'},
+    {label: 'banana', value: 'banana'},
+    {label: 'grape', value: 'grape'},
+    {label: 'grapefruit', value: 'grapefruit'},
   ];
 
   it('returns all options for empty query', () => {
@@ -141,7 +141,7 @@ describe('fuzzyFilter', () => {
     const results = fuzzyFilter('app', options);
     // "apple" and "application" match "app"
     expect(results.length).toBeGreaterThanOrEqual(2);
-    const labels = results.map((r) => r.option.label);
+    const labels = results.map(r => r.option.label);
     expect(labels).toContain('apple');
     expect(labels).toContain('application');
     expect(labels).not.toContain('banana');
@@ -157,7 +157,7 @@ describe('fuzzyFilter', () => {
 
   it('includes match ranges in results', () => {
     const results = fuzzyFilter('app', options);
-    const appleResult = results.find((r) => r.option.label === 'apple');
+    const appleResult = results.find(r => r.option.label === 'apple');
     expect(appleResult).toBeDefined();
     expect(appleResult!.matchRanges.length).toBeGreaterThan(0);
   });

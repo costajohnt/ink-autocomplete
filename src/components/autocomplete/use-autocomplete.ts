@@ -1,25 +1,27 @@
-import { useInput } from 'ink';
-import { theme } from './theme.js';
-import { graphemeSegments } from './text.js';
-import type { AutocompleteState, AutocompleteAction } from './use-autocomplete-state.js';
+import {useInput} from 'ink';
+import {theme} from './theme.js';
+import {graphemeSegments} from './text.js';
+import type {AutocompleteState, AutocompleteAction} from './use-autocomplete-state.js';
 
-export interface UseAutocompleteOptions {
+export type UseAutocompleteOptions = {
   state: AutocompleteState;
   dispatch: React.Dispatch<AutocompleteAction>;
   isDisabled?: boolean;
   placeholder?: string;
-}
+};
 
-export function useAutocomplete(opts: UseAutocompleteOptions) {
-  const { state, dispatch, isDisabled = false, placeholder = '' } = opts;
+export function useAutocomplete(options: UseAutocompleteOptions) {
+  const {state, dispatch, isDisabled = false, placeholder = ''} = options;
 
   useInput(
     (input, key) => {
-      if (isDisabled) return;
+      if (isDisabled) {
+        return;
+      }
 
       // Escape: close dropdown and clear input
       if (key.escape) {
-        dispatch({ type: 'CLOSE' });
+        dispatch({type: 'CLOSE'});
         return;
       }
 
@@ -31,24 +33,26 @@ export function useAutocomplete(opts: UseAutocompleteOptions) {
           state.focusedIndex < state.filteredOptions.length
         ) {
           const focused = state.filteredOptions[state.focusedIndex]!;
-          dispatch({ type: 'SELECT', value: focused.option.value, label: focused.option.label });
+          dispatch({type: 'SELECT', value: focused.option.value, label: focused.option.label});
         }
+
         return;
       }
 
       // Tab: accept (fill input with focused option label)
       if (key.tab) {
-        dispatch({ type: 'ACCEPT' });
+        dispatch({type: 'ACCEPT'});
         return;
       }
 
       // Arrow keys
       if (key.downArrow) {
-        dispatch({ type: 'FOCUS_NEXT' });
+        dispatch({type: 'FOCUS_NEXT'});
         return;
       }
+
       if (key.upArrow) {
-        dispatch({ type: 'FOCUS_PREV' });
+        dispatch({type: 'FOCUS_PREV'});
         return;
       }
 
@@ -56,44 +60,45 @@ export function useAutocomplete(opts: UseAutocompleteOptions) {
       // On macOS, the physical backspace key sends key.delete (0x7F),
       // not key.backspace. We treat both as backward delete.
       if (key.backspace || key.delete) {
-        dispatch({ type: 'DELETE_BACKWARD' });
+        dispatch({type: 'DELETE_BACKWARD'});
         return;
       }
 
       // Ctrl+D: forward delete
       if (input === 'd' && key.ctrl) {
-        dispatch({ type: 'DELETE_FORWARD' });
+        dispatch({type: 'DELETE_FORWARD'});
         return;
       }
 
       // Left/Right cursor movement
       if (key.leftArrow) {
-        dispatch({ type: 'MOVE_CURSOR_LEFT' });
+        dispatch({type: 'MOVE_CURSOR_LEFT'});
         return;
       }
+
       if (key.rightArrow) {
-        dispatch({ type: 'MOVE_CURSOR_RIGHT' });
+        dispatch({type: 'MOVE_CURSOR_RIGHT'});
         return;
       }
 
       // Ctrl+A: move to start
       if (input === 'a' && key.ctrl) {
-        dispatch({ type: 'MOVE_CURSOR_START' });
+        dispatch({type: 'MOVE_CURSOR_START'});
         return;
       }
 
       // Ctrl+E: move to end
       if (input === 'e' && key.ctrl) {
-        dispatch({ type: 'MOVE_CURSOR_END' });
+        dispatch({type: 'MOVE_CURSOR_END'});
         return;
       }
 
       // Regular character input (may be multi-char if pasted)
       if (input && !key.ctrl && !key.meta) {
-        dispatch({ type: 'INSERT_TEXT', text: input });
+        dispatch({type: 'INSERT_TEXT', text: input});
       }
     },
-    { isActive: !isDisabled },
+    {isActive: !isDisabled},
   );
 
   // Build the rendered input string with cursor visualization
@@ -104,7 +109,7 @@ export function useAutocomplete(opts: UseAutocompleteOptions) {
     isDisabled,
   );
 
-  return { renderedInput };
+  return {renderedInput};
 }
 
 function buildRenderedInput(
@@ -119,21 +124,14 @@ function buildRenderedInput(
 
   if (value.length === 0) {
     // Show placeholder with cursor on first char
-    if (placeholder.length > 0) {
-      return theme.cursor(placeholder[0]!) + theme.placeholder(placeholder.slice(1));
-    }
-    return theme.cursor(' ');
+    return placeholder.length > 0 ? theme.cursor(placeholder[0]!) + theme.placeholder(placeholder.slice(1)) : theme.cursor(' ');
   }
 
   // Render grapheme-by-grapheme so the cursor highlights a whole cluster
   // (emoji, surrogate pairs, ZWJ sequences) rather than a single code unit.
   let result = '';
-  for (const { segment, start } of graphemeSegments(value)) {
-    if (start === cursorOffset) {
-      result += theme.cursor(segment);
-    } else {
-      result += theme.inputText(segment);
-    }
+  for (const {segment, start} of graphemeSegments(value)) {
+    result += start === cursorOffset ? theme.cursor(segment) : theme.inputText(segment);
   }
 
   // Cursor at end: show inverse space

@@ -1,10 +1,20 @@
-import { useReducer, useEffect, useRef, useMemo } from 'react';
-import { fuzzyFilter, fuzzyMatch, collapseIndices } from '../../fuzzy.js';
-import { prevGraphemeOffset, nextGraphemeOffset } from './text.js';
-import type { Option, FuzzyMatch, OptionsSource, AsyncOptionsProvider } from '../../types.js';
+import {
+  useReducer,
+  useEffect,
+  useRef,
+  useMemo,
+} from 'react';
+import {fuzzyFilter, fuzzyMatch, collapseIndices} from '../../fuzzy.js';
+import type {
+  Option,
+  FuzzyMatch,
+  OptionsSource,
+  AsyncOptionsProvider,
+} from '../../types.js';
+import {prevGraphemeOffset, nextGraphemeOffset} from './text.js';
 
 // --- State ---
-export interface AutocompleteState {
+export type AutocompleteState = {
   inputValue: string;
   cursorOffset: number;
   isOpen: boolean;
@@ -19,25 +29,25 @@ export interface AutocompleteState {
   // Set by SELECT/ACCEPT so the filtering effect skips the programmatic
   // inputValue change and does not re-fetch (or spuriously error) after a pick.
   skipFilter: boolean;
-}
+};
 
 // --- Actions ---
 export type AutocompleteAction =
-  | { type: 'INSERT_TEXT'; text: string }
-  | { type: 'DELETE_BACKWARD' }
-  | { type: 'DELETE_FORWARD' }
-  | { type: 'MOVE_CURSOR_LEFT' }
-  | { type: 'MOVE_CURSOR_RIGHT' }
-  | { type: 'MOVE_CURSOR_START' }
-  | { type: 'MOVE_CURSOR_END' }
-  | { type: 'FOCUS_NEXT' }
-  | { type: 'FOCUS_PREV' }
-  | { type: 'SELECT'; value: string; label: string }
-  | { type: 'ACCEPT' }
-  | { type: 'CLOSE' }
-  | { type: 'SET_FILTERED'; options: FuzzyMatch[] }
-  | { type: 'SET_LOADING'; isLoading: boolean }
-  | { type: 'SET_ERROR'; error: Error };
+	| {type: 'INSERT_TEXT'; text: string}
+	| {type: 'DELETE_BACKWARD'}
+	| {type: 'DELETE_FORWARD'}
+	| {type: 'MOVE_CURSOR_LEFT'}
+	| {type: 'MOVE_CURSOR_RIGHT'}
+	| {type: 'MOVE_CURSOR_START'}
+	| {type: 'MOVE_CURSOR_END'}
+	| {type: 'FOCUS_NEXT'}
+	| {type: 'FOCUS_PREV'}
+	| {type: 'SELECT'; value: string; label: string}
+	| {type: 'ACCEPT'}
+	| {type: 'CLOSE'}
+	| {type: 'SET_FILTERED'; options: FuzzyMatch[]}
+	| {type: 'SET_LOADING'; isLoading: boolean}
+	| {type: 'SET_ERROR'; error: Error};
 
 function clampVisible(
   focusedIndex: number,
@@ -45,9 +55,9 @@ function clampVisible(
   visibleToIndex: number,
   visibleCount: number,
   totalCount: number,
-): { visibleFromIndex: number; visibleToIndex: number } {
+): {visibleFromIndex: number; visibleToIndex: number} {
   if (totalCount <= visibleCount) {
-    return { visibleFromIndex: 0, visibleToIndex: totalCount };
+    return {visibleFromIndex: 0, visibleToIndex: totalCount};
   }
 
   let from = visibleFromIndex;
@@ -73,12 +83,13 @@ function clampVisible(
     from = 0;
     to = visibleCount;
   }
+
   if (to > totalCount) {
     to = totalCount;
     from = totalCount - visibleCount;
   }
 
-  return { visibleFromIndex: from, visibleToIndex: to };
+  return {visibleFromIndex: from, visibleToIndex: to};
 }
 
 export function createReducer(visibleOptionCount: number) {
@@ -111,7 +122,10 @@ export function createReducer(visibleOptionCount: number) {
       }
 
       case 'DELETE_BACKWARD': {
-        if (state.cursorOffset === 0) return state;
+        if (state.cursorOffset === 0) {
+          return state;
+        }
+
         const start = prevGraphemeOffset(state.inputValue, state.cursorOffset);
         const before = state.inputValue.slice(0, start);
         const after = state.inputValue.slice(state.cursorOffset);
@@ -133,7 +147,10 @@ export function createReducer(visibleOptionCount: number) {
       }
 
       case 'DELETE_FORWARD': {
-        if (state.cursorOffset >= state.inputValue.length) return state;
+        if (state.cursorOffset >= state.inputValue.length) {
+          return state;
+        }
+
         const end = nextGraphemeOffset(state.inputValue, state.cursorOffset);
         const before = state.inputValue.slice(0, state.cursorOffset);
         const after = state.inputValue.slice(end);
@@ -154,7 +171,10 @@ export function createReducer(visibleOptionCount: number) {
       }
 
       case 'MOVE_CURSOR_LEFT': {
-        if (state.cursorOffset === 0) return state;
+        if (state.cursorOffset === 0) {
+          return state;
+        }
+
         return {
           ...state,
           cursorOffset: prevGraphemeOffset(state.inputValue, state.cursorOffset),
@@ -162,7 +182,10 @@ export function createReducer(visibleOptionCount: number) {
       }
 
       case 'MOVE_CURSOR_RIGHT': {
-        if (state.cursorOffset >= state.inputValue.length) return state;
+        if (state.cursorOffset >= state.inputValue.length) {
+          return state;
+        }
+
         return {
           ...state,
           cursorOffset: nextGraphemeOffset(state.inputValue, state.cursorOffset),
@@ -170,20 +193,23 @@ export function createReducer(visibleOptionCount: number) {
       }
 
       case 'MOVE_CURSOR_START': {
-        return { ...state, cursorOffset: 0 };
+        return {...state, cursorOffset: 0};
       }
 
       case 'MOVE_CURSOR_END': {
-        return { ...state, cursorOffset: state.inputValue.length };
+        return {...state, cursorOffset: state.inputValue.length};
       }
 
       case 'FOCUS_NEXT': {
-        if (!state.isOpen || state.filteredOptions.length === 0) return state;
+        if (!state.isOpen || state.filteredOptions.length === 0) {
+          return state;
+        }
+
         const next = Math.min(
           state.focusedIndex + 1,
           state.filteredOptions.length - 1,
         );
-        const { visibleFromIndex, visibleToIndex } = clampVisible(
+        const {visibleFromIndex, visibleToIndex} = clampVisible(
           next,
           state.visibleFromIndex,
           state.visibleToIndex,
@@ -199,10 +225,13 @@ export function createReducer(visibleOptionCount: number) {
       }
 
       case 'FOCUS_PREV': {
-        if (!state.isOpen || state.filteredOptions.length === 0) return state;
-        const prev = Math.max(state.focusedIndex - 1, 0);
-        const { visibleFromIndex, visibleToIndex } = clampVisible(
-          prev,
+        if (!state.isOpen || state.filteredOptions.length === 0) {
+          return state;
+        }
+
+        const previous = Math.max(state.focusedIndex - 1, 0);
+        const {visibleFromIndex, visibleToIndex} = clampVisible(
+          previous,
           state.visibleFromIndex,
           state.visibleToIndex,
           visibleOptionCount,
@@ -210,7 +239,7 @@ export function createReducer(visibleOptionCount: number) {
         );
         return {
           ...state,
-          focusedIndex: prev,
+          focusedIndex: previous,
           visibleFromIndex,
           visibleToIndex,
         };
@@ -220,7 +249,7 @@ export function createReducer(visibleOptionCount: number) {
         return {
           ...state,
           selectedValue: action.value,
-          selectedOption: { value: action.value, label: action.label },
+          selectedOption: {value: action.value, label: action.label},
           isOpen: false,
           inputValue: action.label,
           cursorOffset: action.label.length,
@@ -241,8 +270,9 @@ export function createReducer(visibleOptionCount: number) {
         ) {
           return state;
         }
+
         const focused = state.filteredOptions[state.focusedIndex]!;
-        const label = focused.option.label;
+        const {label} = focused.option;
         return {
           ...state,
           inputValue: label,
@@ -277,7 +307,7 @@ export function createReducer(visibleOptionCount: number) {
       case 'SET_FILTERED': {
         const total = action.options.length;
         const clampedFocus = total === 0 ? 0 : Math.min(state.focusedIndex, total - 1);
-        const { visibleFromIndex, visibleToIndex } = clampVisible(
+        const {visibleFromIndex, visibleToIndex} = clampVisible(
           clampedFocus,
           state.visibleFromIndex,
           state.visibleToIndex,
@@ -295,7 +325,7 @@ export function createReducer(visibleOptionCount: number) {
       }
 
       case 'SET_LOADING': {
-        return { ...state, isLoading: action.isLoading };
+        return {...state, isLoading: action.isLoading};
       }
 
       case 'SET_ERROR': {
@@ -306,13 +336,14 @@ export function createReducer(visibleOptionCount: number) {
         };
       }
 
-      default:
+      default: {
         return state;
+      }
     }
   };
 }
 
-export interface UseAutocompleteStateOptions {
+export type UseAutocompleteStateOptions = {
   options: OptionsSource;
   defaultValue?: string;
   visibleOptionCount?: number;
@@ -320,9 +351,9 @@ export interface UseAutocompleteStateOptions {
   onChange?: (value: string) => void;
   onSelect?: (value: string, option?: Option) => void;
   onError?: (error: Error) => void;
-}
+};
 
-export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
+export function useAutocompleteState(options_: UseAutocompleteStateOptions) {
   const {
     options,
     defaultValue = '',
@@ -331,7 +362,7 @@ export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
     onChange,
     onSelect,
     onError,
-  } = opts;
+  } = options_;
 
   const isAsync = typeof options === 'function';
   const effectiveDebounce = debounceMs ?? (isAsync ? 150 : 0);
@@ -345,7 +376,7 @@ export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
     visibleFromIndex: 0,
     visibleToIndex: 0,
     selectedValue: null,
-          selectedOption: null,
+    selectedOption: null,
     isLoading: false,
     error: null,
     skipFilter: false,
@@ -367,48 +398,53 @@ export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
   onErrorRef.current = onError;
 
   // Previous inputValue for change detection
-  const prevInputRef = useRef(state.inputValue);
-  const prevSelectedRef = useRef(state.selectedValue);
-  const prevErrorRef = useRef(state.error);
+  const previousInputRef = useRef(state.inputValue);
+  const previousSelectedRef = useRef(state.selectedValue);
+  const previousErrorRef = useRef(state.error);
 
   useEffect(() => {
-    if (state.inputValue !== prevInputRef.current) {
-      prevInputRef.current = state.inputValue;
-      onChangeRef.current?.(state.inputValue);
+    if (state.inputValue === previousInputRef.current) {
+      return;
     }
+
+    previousInputRef.current = state.inputValue;
+    onChangeRef.current?.(state.inputValue);
   }, [state.inputValue]);
 
   useEffect(() => {
     if (
       state.selectedValue !== null &&
-      state.selectedValue !== prevSelectedRef.current
+      state.selectedValue !== previousSelectedRef.current
     ) {
-      prevSelectedRef.current = state.selectedValue;
+      previousSelectedRef.current = state.selectedValue;
       onSelectRef.current?.(
         state.selectedValue,
         state.selectedOption ?? undefined,
       );
     } else if (state.selectedValue === null) {
-      prevSelectedRef.current = null;
+      previousSelectedRef.current = null;
     }
   }, [state.selectedValue, state.selectedOption]);
 
   useEffect(() => {
-    if (state.error !== null && state.error !== prevErrorRef.current) {
-      prevErrorRef.current = state.error;
-      onErrorRef.current?.(state.error);
+    if (state.error === null || state.error === previousErrorRef.current) {
+      return;
     }
+
+    previousErrorRef.current = state.error;
+    onErrorRef.current?.(state.error);
   }, [state.error]);
 
   // Stabilize options reference so inline array literals don't cause infinite re-renders.
   // For arrays, do a shallow JSON comparison; for functions, compare by reference.
   const optionsRef = useRef(options);
-  const optionsChanged = isAsync
+  const isOptionsChanged = isAsync
     ? options !== optionsRef.current
     : JSON.stringify(options) !== JSON.stringify(optionsRef.current);
-  if (optionsChanged) {
+  if (isOptionsChanged) {
     optionsRef.current = options;
   }
+
   const stableOptions = optionsRef.current;
 
   // Filtering logic with debounce and async support
@@ -435,33 +471,37 @@ export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
         // Async provider: the provider is responsible for filtering.
         // We only run fuzzyMatch on the results for highlight data, not for filtering/sorting.
         const counter = ++requestCounterRef.current;
-        dispatch({ type: 'SET_LOADING', isLoading: true });
+        dispatch({type: 'SET_LOADING', isLoading: true});
         (stableOptions as AsyncOptionsProvider)(state.inputValue).then(
-          (result) => {
-            if (counter === requestCounterRef.current) {
-              const matches: FuzzyMatch[] = result.map((option) => {
-                const match = state.inputValue.length > 0
-                  ? fuzzyMatch(state.inputValue, option.label)
-                  : null;
-                return {
-                  option,
-                  score: match?.score ?? 1,
-                  matchRanges: match ? collapseIndices(match.matchedIndices) : [],
-                };
-              });
-              dispatch({ type: 'SET_FILTERED', options: matches });
+          result => {
+            if (counter !== requestCounterRef.current) {
+              return;
             }
+
+            const matches: FuzzyMatch[] = result.map(option => {
+              const match = state.inputValue.length > 0
+                ? fuzzyMatch(state.inputValue, option.label)
+                : null;
+              return {
+                option,
+                score: match?.score ?? 1,
+                matchRanges: match ? collapseIndices(match.matchedIndices) : [],
+              };
+            });
+            dispatch({type: 'SET_FILTERED', options: matches});
           },
-          (err) => {
-            if (counter === requestCounterRef.current) {
-              const error = err instanceof Error ? err : new Error(String(err));
-              dispatch({ type: 'SET_ERROR', error });
+          error_ => {
+            if (counter !== requestCounterRef.current) {
+              return;
             }
+
+            const error = error_ instanceof Error ? error_ : new Error(String(error_));
+            dispatch({type: 'SET_ERROR', error});
           },
         );
       } else {
         const filtered = fuzzyFilter(state.inputValue, stableOptions as Option[]);
-        dispatch({ type: 'SET_FILTERED', options: filtered });
+        dispatch({type: 'SET_FILTERED', options: filtered});
       }
     };
 
@@ -478,5 +518,5 @@ export function useAutocompleteState(opts: UseAutocompleteStateOptions) {
     };
   }, [state.inputValue, state.skipFilter, stableOptions, isAsync, effectiveDebounce]);
 
-  return { state, dispatch };
+  return {state, dispatch};
 }

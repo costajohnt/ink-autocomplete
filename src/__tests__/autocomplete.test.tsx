@@ -1,29 +1,33 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
-import { render } from 'ink-testing-library';
-import { Autocomplete } from '../components/autocomplete/autocomplete.js';
-import { createReducer } from '../components/autocomplete/use-autocomplete-state.js';
-import type { AutocompleteState } from '../components/autocomplete/use-autocomplete-state.js';
-import type { Option } from '../types.js';
+import {
+  describe,
+  it,
+  expect,
+  vi,
+} from 'vitest';
+import {render} from 'ink-testing-library';
+import {Autocomplete} from '../components/autocomplete/autocomplete.js';
+import {createReducer, type AutocompleteState} from '../components/autocomplete/use-autocomplete-state.js';
+import type {Option} from '../types.js';
 
 const defaultOptions: Option[] = [
-  { label: 'Apple', value: 'apple' },
-  { label: 'Application', value: 'application' },
-  { label: 'Banana', value: 'banana' },
-  { label: 'Cherry', value: 'cherry' },
-  { label: 'Date', value: 'date' },
-  { label: 'Elderberry', value: 'elderberry' },
-  { label: 'Fig', value: 'fig' },
-  { label: 'Grape', value: 'grape' },
+  {label: 'Apple', value: 'apple'},
+  {label: 'Application', value: 'application'},
+  {label: 'Banana', value: 'banana'},
+  {label: 'Cherry', value: 'cherry'},
+  {label: 'Date', value: 'date'},
+  {label: 'Elderberry', value: 'elderberry'},
+  {label: 'Fig', value: 'fig'},
+  {label: 'Grape', value: 'grape'},
 ];
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const delay = async (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Strip ANSI escape codes so text assertions don't break under FORCE_COLOR,
 // where chalk wraps substrings in codes that split words (e.g. 'Ban<esc>[22mana').
-const ANSI_PATTERN = new RegExp('\\u001B\\[[0-9;]*m', 'g');
+const ANSI_PATTERN = new RegExp(String.raw`\u001B\[[0-9;]*m`, 'g');
 const clean = (frame: () => string | undefined): string =>
-  (frame() ?? '').replace(ANSI_PATTERN, '');
+  (frame() ?? '').replaceAll(ANSI_PATTERN, '');
 
 // Poll a predicate until it holds, instead of sleeping a fixed amount and hoping
 // Ink has re-rendered. Fixed sleeps raced Ink's render/effect scheduling and
@@ -36,7 +40,7 @@ const clean = (frame: () => string | undefined): string =>
 // closure (e.g. empty filteredOptions) and be dropped.
 const waitFor = async (
   predicate: () => boolean,
-  { timeout = 3000, interval = 15 }: { timeout?: number; interval?: number } = {},
+  {timeout = 3000, interval = 15}: {timeout?: number; interval?: number} = {},
 ): Promise<void> => {
   const start = Date.now();
   const check = () => {
@@ -46,33 +50,39 @@ const waitFor = async (
       return false;
     }
   };
+
   while (Date.now() - start < timeout) {
     if (check()) {
       await delay(interval); // let post-commit passive effects flush
       return;
     }
+
     await delay(interval);
   }
-  if (check()) return;
+
+  if (check()) {
+    return;
+  }
+
   throw new Error(`waitFor: condition not met within ${timeout}ms`);
 };
 
 // Give Ink a beat to commit a dispatch and re-subscribe its input handler before
 // sending a second key that depends on the first (e.g. move-cursor then delete);
 // there's no rendered signal for cursor position to poll on.
-const settle = () => delay(40);
+const settle = async () => delay(40);
 
 type Stdin = ReturnType<typeof render>['stdin'];
 
 // Ink attaches a 'readable' listener to stdin (in an effect, once raw mode is
 // enabled by an active useInput) before it can receive input. Waiting for it
 // prevents early writes from being dropped.
-const waitForReady = (stdin: Stdin): Promise<void> =>
+const waitForReady = async (stdin: Stdin): Promise<void> =>
   waitFor(() => stdin.listenerCount('readable') > 0);
 
 const frameHas = (lastFrame: () => string | undefined, text: string): boolean =>
   clean(lastFrame).includes(text);
-const waitForText = (
+const waitForText = async (
   lastFrame: () => string | undefined,
   text: string,
 ): Promise<void> => waitFor(() => frameHas(lastFrame, text));
@@ -84,26 +94,26 @@ function makeDeferred<T>() {
     resolve = res;
     reject = rej;
   });
-  return { promise, resolve, reject };
+  return {promise, resolve, reject};
 }
 
 describe('Autocomplete', () => {
   it('renders with placeholder', async () => {
-    const { lastFrame } = render(
+    const {lastFrame} = render(
       <Autocomplete options={defaultOptions} placeholder="Search fruits..." />,
     );
     await waitForText(lastFrame, 'Search fruits');
   });
 
   it('renders with custom prefix', async () => {
-    const { lastFrame } = render(
+    const {lastFrame} = render(
       <Autocomplete options={defaultOptions} prefix="$ " />,
     );
     await waitForText(lastFrame, '$');
   });
 
   it('opens dropdown when typing', async () => {
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={defaultOptions} />,
     );
     await waitForReady(stdin);
@@ -113,7 +123,7 @@ describe('Autocomplete', () => {
   });
 
   it('filters options based on input', async () => {
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={defaultOptions} />,
     );
     await waitForReady(stdin);
@@ -125,7 +135,7 @@ describe('Autocomplete', () => {
   });
 
   it('navigates with arrow keys', async () => {
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={defaultOptions} />,
     );
     await waitForReady(stdin);
@@ -134,14 +144,14 @@ describe('Autocomplete', () => {
     await waitForText(lastFrame, 'Apple');
 
     // Press down arrow
-    stdin.write('\x1B[B');
+    stdin.write('\u{1B}[B');
     // Dropdown stays open with Apple still visible
     await waitForText(lastFrame, 'Apple');
   });
 
   it('selects with enter', async () => {
     const onSelect = vi.fn();
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={defaultOptions} onSelect={onSelect} />,
     );
     await waitForReady(stdin);
@@ -158,7 +168,7 @@ describe('Autocomplete', () => {
 
   it('passes the full Option as the second onSelect argument', async () => {
     const onSelect = vi.fn();
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={defaultOptions} onSelect={onSelect} />,
     );
     await waitForReady(stdin);
@@ -176,7 +186,7 @@ describe('Autocomplete', () => {
 
   it('accepts with tab (fills input, keeps dropdown open)', async () => {
     const onChange = vi.fn();
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={defaultOptions} onChange={onChange} />,
     );
     await waitForReady(stdin);
@@ -194,11 +204,11 @@ describe('Autocomplete', () => {
   it('enter after tab selects the accepted option, not the first row', async () => {
     const onSelect = vi.fn();
     const options: Option[] = [
-      { label: 'apple', value: 'apple' },
-      { label: 'banana', value: 'banana' },
-      { label: 'avocado', value: 'avocado' },
+      {label: 'apple', value: 'apple'},
+      {label: 'banana', value: 'banana'},
+      {label: 'avocado', value: 'avocado'},
     ];
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={options} onSelect={onSelect} />,
     );
     await waitForReady(stdin);
@@ -207,11 +217,11 @@ describe('Autocomplete', () => {
     await waitForText(lastFrame, 'avocado');
 
     // Move focus to the second row, then accept it with Tab.
-    stdin.write('\u001B[B');
+    stdin.write('\u{1B}[B');
     await waitFor(() => /❯\s*avocado/.test(clean(lastFrame)));
 
     stdin.write('\t');
-    await waitFor(() => clean(lastFrame).split('\n')[0]!.includes('avocado'));
+    await waitFor(() => clean(lastFrame).split('\n', 1)[0]!.includes('avocado'));
 
     stdin.write('\r');
     await waitFor(() => onSelect.mock.calls.length > 0);
@@ -223,7 +233,7 @@ describe('Autocomplete', () => {
   });
 
   it('closes dropdown on escape', async () => {
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={defaultOptions} />,
     );
     await waitForReady(stdin);
@@ -232,12 +242,12 @@ describe('Autocomplete', () => {
     await waitForText(lastFrame, 'Apple');
 
     // Press escape: input is cleared and dropdown closes
-    stdin.write('\x1B');
+    stdin.write('\u{1B}');
     await waitFor(() => !frameHas(lastFrame, 'Apple'));
   });
 
   it('handles backspace', async () => {
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={defaultOptions} />,
     );
     await waitForReady(stdin);
@@ -247,14 +257,14 @@ describe('Autocomplete', () => {
 
     // Backspace (0x7F triggers key.delete in ink). Input becomes "ba"; the
     // lowercase echo of "ban" disappears while Banana still matches.
-    stdin.write('\x7F');
+    stdin.write('\u{7F}');
     await waitFor(
       () => !frameHas(lastFrame, 'ban') && frameHas(lastFrame, 'Banana'),
     );
   });
 
   it('shows no matches text when nothing matches', async () => {
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={defaultOptions} noMatchesText="Nothing found" />,
     );
     await waitForReady(stdin);
@@ -267,7 +277,7 @@ describe('Autocomplete', () => {
     // Disabled: useInput is inactive so Ink never attaches its readable
     // listener; a bounded wait is enough to prove onChange never fires.
     const onChange = vi.fn();
-    const { stdin } = render(
+    const {stdin} = render(
       <Autocomplete options={defaultOptions} isDisabled onChange={onChange} />,
     );
     await delay(150);
@@ -281,7 +291,7 @@ describe('Autocomplete', () => {
   it('respects visibleOptionCount for scrolling', async () => {
     // 'a' matches 5 options; a 3-row window must show the top 3 (starting at the
     // focused first match) plus a "more" indicator — not an empty window.
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={defaultOptions} visibleOptionCount={3} />,
     );
     await waitForReady(stdin);
@@ -299,12 +309,12 @@ describe('Autocomplete', () => {
   });
 
   it('shows scroll indicators', async () => {
-    const manyOptions: Option[] = Array.from({ length: 20 }, (_, i) => ({
+    const manyOptions: Option[] = Array.from({length: 20}, (_, i) => ({
       label: `Option ${i + 1}`,
       value: `option-${i + 1}`,
     }));
 
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={manyOptions} visibleOptionCount={3} />,
     );
     await waitForReady(stdin);
@@ -317,20 +327,20 @@ describe('Autocomplete', () => {
 
   it('calls onChange when input changes', async () => {
     const onChange = vi.fn();
-    const { stdin } = render(
+    const {stdin} = render(
       <Autocomplete options={defaultOptions} onChange={onChange} />,
     );
     await waitForReady(stdin);
 
     stdin.write('a');
-    await waitFor(() => onChange.mock.calls.some((c) => c[0] === 'a'));
+    await waitFor(() => onChange.mock.calls.some(c => c[0] === 'a'));
 
     expect(onChange).toHaveBeenCalledWith('a');
   });
 
   it('calls onSelect when option is selected', async () => {
     const onSelect = vi.fn();
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={defaultOptions} onSelect={onSelect} />,
     );
     await waitForReady(stdin);
@@ -346,7 +356,7 @@ describe('Autocomplete', () => {
 
   it('fires onSelect again when the same option is re-selected', async () => {
     const onSelect = vi.fn();
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={defaultOptions} onSelect={onSelect} />,
     );
     await waitForReady(stdin);
@@ -358,7 +368,7 @@ describe('Autocomplete', () => {
     await waitFor(() => onSelect.mock.calls.length === 1);
 
     // Escape to clear, then re-type and re-select the same option
-    stdin.write('\x1B');
+    stdin.write('\u{1B}');
     await waitFor(() => !frameHas(lastFrame, 'Apple'));
     stdin.write('apple');
     await waitForText(lastFrame, 'Apple');
@@ -370,7 +380,7 @@ describe('Autocomplete', () => {
   });
 
   it('highlights matched characters', async () => {
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={defaultOptions} />,
     );
     await waitForReady(stdin);
@@ -383,12 +393,12 @@ describe('Autocomplete', () => {
   it('handles async options', async () => {
     const asyncProvider = vi.fn(async (query: string) => {
       await delay(10);
-      return defaultOptions.filter((o) =>
+      return defaultOptions.filter(o =>
         o.label.toLowerCase().includes(query.toLowerCase()),
       );
     });
 
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={asyncProvider} debounceMs={10} />,
     );
     await waitForReady(stdin);
@@ -404,7 +414,7 @@ describe('Autocomplete', () => {
       return defaultOptions;
     };
 
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete
         options={asyncProvider}
         loadingText="Searching..."
@@ -425,7 +435,7 @@ describe('Autocomplete', () => {
       },
     ];
 
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={longOptions} />,
     );
     await waitForReady(stdin);
@@ -436,12 +446,12 @@ describe('Autocomplete', () => {
 
   it('handles special characters in input', async () => {
     const specialOptions: Option[] = [
-      { label: 'C++ Programming', value: 'cpp' },
-      { label: 'C# Development', value: 'csharp' },
-      { label: 'Node.js', value: 'nodejs' },
+      {label: 'C++ Programming', value: 'cpp'},
+      {label: 'C# Development', value: 'csharp'},
+      {label: 'Node.js', value: 'nodejs'},
     ];
 
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={specialOptions} />,
     );
     await waitForReady(stdin);
@@ -451,7 +461,7 @@ describe('Autocomplete', () => {
   });
 
   it('handles empty options array', async () => {
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={[]} noMatchesText="No items" />,
     );
     await waitForReady(stdin);
@@ -466,7 +476,7 @@ describe('Autocomplete', () => {
     });
 
     const onError = vi.fn();
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={asyncProvider} debounceMs={0} onError={onError} />,
     );
     await waitForReady(stdin);
@@ -481,7 +491,7 @@ describe('Autocomplete', () => {
 
     // Now set up provider to succeed, then type to clear the error
     asyncProvider.mockImplementation(async () => [
-      { label: 'Alpha', value: 'alpha' },
+      {label: 'Alpha', value: 'alpha'},
     ]);
 
     stdin.write('l');
@@ -492,7 +502,7 @@ describe('Autocomplete', () => {
   });
 
   it('renders with defaultValue', async () => {
-    const { lastFrame } = render(
+    const {lastFrame} = render(
       <Autocomplete options={defaultOptions} defaultValue="ban" />,
     );
     // The input should show "ban" (the default value text is rendered)
@@ -501,7 +511,7 @@ describe('Autocomplete', () => {
 
   it('handles forward delete key (DELETE_FORWARD)', async () => {
     const onChange = vi.fn();
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={defaultOptions} onChange={onChange} />,
     );
     await waitForReady(stdin);
@@ -511,9 +521,9 @@ describe('Autocomplete', () => {
     await waitForText(lastFrame, 'Banana');
 
     // Move cursor to the start (Ctrl+A), let it commit, then forward delete (Ctrl+D).
-    stdin.write('\x01');
+    stdin.write('\u{1}');
     await settle();
-    stdin.write('\x04');
+    stdin.write('\u{4}');
 
     // After deleting the first char, input is "an"
     await waitFor(() => onChange.mock.calls.at(-1)?.[0] === 'an');
@@ -522,7 +532,7 @@ describe('Autocomplete', () => {
   it('debounces async calls', async () => {
     const asyncProvider = vi.fn(async (_query: string) => defaultOptions);
 
-    const { stdin } = render(
+    const {stdin} = render(
       <Autocomplete options={asyncProvider} debounceMs={100} />,
     );
     await waitForReady(stdin);
@@ -540,7 +550,7 @@ describe('Autocomplete', () => {
 
   it('deletes an emoji as a single unit on backspace', async () => {
     const onChange = vi.fn();
-    const { stdin } = render(
+    const {stdin} = render(
       <Autocomplete options={defaultOptions} onChange={onChange} />,
     );
     await waitForReady(stdin);
@@ -549,13 +559,13 @@ describe('Autocomplete', () => {
     await waitFor(() => onChange.mock.calls.at(-1)?.[0] === '😀');
 
     // One backspace should clear the whole emoji, not leave a lone surrogate.
-    stdin.write('\x7F');
+    stdin.write('\u{7F}');
     await waitFor(() => onChange.mock.calls.at(-1)?.[0] === '');
   });
 
   it('deletes a ZWJ emoji sequence as one grapheme cluster', async () => {
     const onChange = vi.fn();
-    const { stdin } = render(
+    const {stdin} = render(
       <Autocomplete options={defaultOptions} onChange={onChange} />,
     );
     await waitForReady(stdin);
@@ -564,13 +574,13 @@ describe('Autocomplete', () => {
     stdin.write('👨‍👩‍👧');
     await waitFor(() => onChange.mock.calls.at(-1)?.[0] === '👨‍👩‍👧');
 
-    stdin.write('\x7F');
+    stdin.write('\u{7F}');
     await waitFor(() => onChange.mock.calls.at(-1)?.[0] === '');
   });
 
   it('cursor-left lands on a grapheme boundary, never mid-glyph', async () => {
     const onChange = vi.fn();
-    const { stdin } = render(
+    const {stdin} = render(
       <Autocomplete options={defaultOptions} onChange={onChange} />,
     );
     await waitForReady(stdin);
@@ -580,22 +590,25 @@ describe('Autocomplete', () => {
 
     // Left arrow moves the cursor before the emoji (not into its surrogate
     // pair); forward delete (Ctrl+D) then removes the whole emoji, leaving "a".
-    stdin.write('\x1B[D');
+    stdin.write('\u{1B}[D');
     await settle();
-    stdin.write('\x04');
+    stdin.write('\u{4}');
     await waitFor(() => onChange.mock.calls.at(-1)?.[0] === 'a');
   });
 
   it('does not re-fetch or fire onError after selecting an async option', async () => {
     const asyncProvider = vi.fn(async (query: string): Promise<Option[]> => {
       // A re-filter with the selected label would throw and surface a spurious error.
-      if (query === 'Apple') throw new Error('should not re-fetch after select');
-      return [{ label: 'Apple', value: 'apple' }];
+      if (query === 'Apple') {
+        throw new Error('should not re-fetch after select');
+      }
+
+      return [{label: 'Apple', value: 'apple'}];
     });
     const onError = vi.fn();
     const onSelect = vi.fn();
 
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete
         options={asyncProvider}
         debounceMs={0}
@@ -626,13 +639,13 @@ describe('Autocomplete', () => {
     const onError = vi.fn();
     const onSelect = vi.fn();
     // 'ap' is held in flight; every other query resolves so a list is selectable.
-    const asyncProvider = vi.fn((query: string): Promise<Option[]> =>
+    const asyncProvider = vi.fn(async (query: string): Promise<Option[]> =>
       query === 'ap'
         ? inflight.promise
-        : Promise.resolve([{ label: 'Apple', value: 'apple' }]),
+        : Promise.resolve([{label: 'Apple', value: 'apple'}]),
     );
 
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete
         options={asyncProvider}
         debounceMs={0}
@@ -647,7 +660,7 @@ describe('Autocomplete', () => {
 
     // Start a fetch we keep pending, then select the still-focused option.
     stdin.write('p');
-    await waitFor(() => asyncProvider.mock.calls.some((c) => c[0] === 'ap'));
+    await waitFor(() => asyncProvider.mock.calls.some(c => c[0] === 'ap'));
     stdin.write('\r');
     await waitFor(() => onSelect.mock.calls.length > 0);
 
@@ -661,13 +674,13 @@ describe('Autocomplete', () => {
 
   it('discards an in-flight fetch that resolves after an accept (stale results not shown)', async () => {
     const inflight = makeDeferred<Option[]>();
-    const asyncProvider = vi.fn((query: string): Promise<Option[]> =>
+    const asyncProvider = vi.fn(async (query: string): Promise<Option[]> =>
       query === 'ap'
         ? inflight.promise
-        : Promise.resolve([{ label: 'Apple', value: 'apple' }]),
+        : Promise.resolve([{label: 'Apple', value: 'apple'}]),
     );
 
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={asyncProvider} debounceMs={0} />,
     );
     await waitForReady(stdin);
@@ -677,12 +690,12 @@ describe('Autocomplete', () => {
 
     // Start a fetch we keep pending, then accept (Tab) the focused option.
     stdin.write('p');
-    await waitFor(() => asyncProvider.mock.calls.some((c) => c[0] === 'ap'));
+    await waitFor(() => asyncProvider.mock.calls.some(c => c[0] === 'ap'));
     stdin.write('\t');
     await waitForText(lastFrame, 'Apple');
 
     // The in-flight fetch resolves with a different list — must be discarded.
-    inflight.resolve([{ label: 'ZEBRA', value: 'zebra' }]);
+    inflight.resolve([{label: 'ZEBRA', value: 'zebra'}]);
     await delay(50);
 
     expect(clean(lastFrame)).not.toContain('ZEBRA');
@@ -690,11 +703,11 @@ describe('Autocomplete', () => {
 
   it('resumes filtering after a selection', async () => {
     const asyncProvider = vi.fn(async (query: string) =>
-      defaultOptions.filter((o) =>
+      defaultOptions.filter(o =>
         o.label.toLowerCase().includes(query.toLowerCase()),
       ),
     );
-    const { lastFrame, stdin } = render(
+    const {lastFrame, stdin} = render(
       <Autocomplete options={asyncProvider} debounceMs={0} />,
     );
     await waitForReady(stdin);
@@ -741,7 +754,7 @@ describe('reducer DELETE_FORWARD', () => {
         visibleFromIndex: 5,
         visibleToIndex: 8,
       }),
-      { type: 'DELETE_FORWARD' },
+      {type: 'DELETE_FORWARD'},
     );
     expect(next.inputValue).toBe('');
     expect(next.isOpen).toBe(false);
@@ -758,7 +771,7 @@ describe('reducer DELETE_FORWARD', () => {
         visibleFromIndex: 2,
         visibleToIndex: 5,
       }),
-      { type: 'DELETE_FORWARD' },
+      {type: 'DELETE_FORWARD'},
     );
     expect(next.inputValue).toBe('bc');
     expect(next.visibleFromIndex).toBe(2);
@@ -769,22 +782,22 @@ describe('reducer DELETE_FORWARD', () => {
 describe('reducer grapheme cursor math', () => {
   it('MOVE_CURSOR_RIGHT steps over an emoji as one unit', () => {
     const reducer = createReducer(5);
-    let state = makeState({ inputValue: '😀a', cursorOffset: 0 });
-    state = reducer(state, { type: 'MOVE_CURSOR_RIGHT' });
+    let state = makeState({inputValue: '😀a', cursorOffset: 0});
+    state = reducer(state, {type: 'MOVE_CURSOR_RIGHT'});
     expect(state.cursorOffset).toBe(2); // past the 2-code-unit emoji
-    state = reducer(state, { type: 'MOVE_CURSOR_RIGHT' });
+    state = reducer(state, {type: 'MOVE_CURSOR_RIGHT'});
     expect(state.cursorOffset).toBe(3); // past 'a'
   });
 
   it('INSERT_TEXT of a multi-emoji paste stays cluster-aligned for deletion', () => {
     const reducer = createReducer(5);
-    let state = makeState({ inputValue: '', cursorOffset: 0 });
-    state = reducer(state, { type: 'INSERT_TEXT', text: '😀😀' });
+    let state = makeState({inputValue: '', cursorOffset: 0});
+    state = reducer(state, {type: 'INSERT_TEXT', text: '😀😀'});
     expect(state.inputValue).toBe('😀😀');
     expect(state.cursorOffset).toBe(4); // two 2-code-unit emoji
 
     // Backspace removes exactly one emoji cluster.
-    state = reducer(state, { type: 'DELETE_BACKWARD' });
+    state = reducer(state, {type: 'DELETE_BACKWARD'});
     expect(state.inputValue).toBe('😀');
     expect(state.cursorOffset).toBe(2);
   });
@@ -793,8 +806,8 @@ describe('reducer grapheme cursor math', () => {
 describe('reducer ACCEPT', () => {
   it('keeps focus on the accepted option', () => {
     const reducer = createReducer(5);
-    const filteredOptions = ['apple', 'avocado', 'banana'].map((label) => ({
-      option: { label, value: label },
+    const filteredOptions = ['apple', 'avocado', 'banana'].map(label => ({
+      option: {label, value: label},
       score: 1,
       matchRanges: [],
     }));
@@ -805,7 +818,7 @@ describe('reducer ACCEPT', () => {
       focusedIndex: 1,
       visibleToIndex: 3,
     });
-    const next = reducer(state, { type: 'ACCEPT' });
+    const next = reducer(state, {type: 'ACCEPT'});
     expect(next.inputValue).toBe('avocado');
     expect(next.focusedIndex).toBe(1);
     expect(next.filteredOptions[next.focusedIndex]!.option.value).toBe('avocado');
