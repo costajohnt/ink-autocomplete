@@ -1,18 +1,18 @@
-export interface Option {
+export type Option = {
   label: string;
   value: string;
-}
+};
 
-export interface MatchRange {
+export type MatchRange = {
   start: number;
   end: number;
-}
+};
 
-export interface FuzzyMatch {
+export type FuzzyMatch = {
   option: Option;
   score: number;
   matchRanges: MatchRange[];
-}
+};
 
 export type AsyncOptionsProvider = (query: string) => Promise<Option[]>;
 

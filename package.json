@@ -2,19 +2,24 @@
   "name": "ink-combobox",
   "version": "0.2.4",
   "description": "Combobox/fuzzy-search autocomplete input for Ink",
+  "license": "MIT",
+  "repository": "github:costajohnt/ink-autocomplete",
+  "homepage": "https://github.com/costajohnt/ink-autocomplete#readme",
+  "bugs": "https://github.com/costajohnt/ink-autocomplete/issues",
+  "author": "John Costa",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
@@ -24,13 +29,9 @@
     "test:watch": "vitest",
     "prepublishOnly": "npm run build"
   },
-  "author": "John Costa",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/costajohnt/ink-autocomplete"
-  },
-  "homepage": "https://github.com/costajohnt/ink-autocomplete#readme",
-  "bugs": "https://github.com/costajohnt/ink-autocomplete/issues",
+  "files": [
+    "dist"
+  ],
   "keywords": [
     "ink",
     "cli",
@@ -42,15 +43,6 @@
     "react",
     "tui"
   ],
-  "engines": {
-    "node": ">=20"
-  },
-  "license": "MIT",
-  "peerDependencies": {
-    "chalk": "^5.0.0",
-    "ink": ">=6.0.0",
-    "react": ">=19.0.0"
-  },
   "devDependencies": {
     "@costajohnt/ink-config": "github:costajohnt/ink-config",
     "@types/react": "^19.0.0",
@@ -62,5 +54,10 @@
     "typescript": "^5.6.0",
     "vitest": "^4.1.11",
     "xo": "^5.0.1"
+  },
+  "peerDependencies": {
+    "chalk": "^5.0.0",
+    "ink": ">=6.0.0",
+    "react": ">=19.0.0"
   }
 }
