@@ -30,7 +30,7 @@ A combobox/fuzzy-search autocomplete input component for [Ink](https://github.co
 npm install ink-combobox
 ```
 
-Peer dependencies: `ink >= 6.0.0`, `react >= 19.0.0`, and `chalk >= 5.0.0`. Requires Node.js >= 20.
+Peer dependencies: `ink >= 6.0.0`, `react >= 19.0.0`, and `chalk >= 5.0.0`. Requires Node.js >= 22.
 
 > **Note:** `chalk` is a peer dependency because Ink bundles it internally. Keeping it as a peer avoids version conflicts. If your project already depends on Ink, chalk is likely already available.
 
@@ -309,7 +309,7 @@ npm run build
 npm test
 ```
 
-The test suite uses [vitest](https://vitest.dev/) with [ink-testing-library](https://github.com/vadimdemedes/ink-testing-library). CI runs against Node 20 and 22.
+The test suite uses [vitest](https://vitest.dev/) with [ink-testing-library](https://github.com/vadimdemedes/ink-testing-library). CI runs against Node 22 and 24.
 
 ## Changelog
 

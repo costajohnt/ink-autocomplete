@@ -41,7 +41,7 @@ npx tsx examples/demo-recording.tsx
 
 ## Tests
 
-Tests live in `src/__tests__/` and use [vitest](https://vitest.dev/) with [ink-testing-library](https://github.com/vadimdemedes/ink-testing-library). CI runs against Node 20 and 22.
+Tests live in `src/__tests__/` and use [vitest](https://vitest.dev/) with [ink-testing-library](https://github.com/vadimdemedes/ink-testing-library). CI runs against Node 22 and 24.
 
 ## Reporting issues
 

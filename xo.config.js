@@ -24,8 +24,6 @@ const xoConfig = [
 			'no-await-in-loop': 'off',
 			// `__tests__` is the conventional Vitest/Jest test directory name.
 			'unicorn/filename-case': 'off',
-			// `Promise.withResolvers()` needs Node 22; CI still tests Node 20 (engines: >=20).
-			'unicorn/prefer-promise-with-resolvers': 'off',
 		},
 	},
 ];

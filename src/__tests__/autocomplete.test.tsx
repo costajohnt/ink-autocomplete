@@ -88,13 +88,7 @@ const waitForText = async (
 ): Promise<void> => waitFor(() => hasFrameText(lastFrame, text));
 
 function makeDeferred<T>() {
-  let resolve!: (value: T) => void;
-  let reject!: (reason?: unknown) => void;
-  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
-    resolve = resolvePromise;
-    reject = rejectPromise;
-  });
-  return {promise, resolve, reject};
+  return Promise.withResolvers<T>();
 }
 
 describe('Autocomplete', () => {
