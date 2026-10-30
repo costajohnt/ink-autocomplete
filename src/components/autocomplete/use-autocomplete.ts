@@ -94,7 +94,7 @@ export function useAutocomplete(options: UseAutocompleteOptions) {
       }
 
       // Regular character input (may be multi-char if pasted)
-      if (input && !key.ctrl && !key.meta) {
+      if (input.length > 0 && !key.ctrl && !key.meta) {
         dispatch({type: 'INSERT_TEXT', text: input});
       }
     },
@@ -119,7 +119,7 @@ function buildRenderedInput(
   isDisabled: boolean,
 ): string {
   if (isDisabled) {
-    return value || theme.placeholder(placeholder);
+    return value.length > 0 ? value : theme.placeholder(placeholder);
   }
 
   if (value.length === 0) {

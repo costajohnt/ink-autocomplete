@@ -44,7 +44,7 @@ function isWordBoundary(label: string, index: number): boolean {
   }
 
   const previous = label[index - 1]!;
-  return previous === ' ' || previous === '-' || previous === '_' || previous === '/' || previous === '.';
+  return [' ', '-', '_', '/', '.'].includes(previous);
 }
 
 function isCamelCaseBoundary(label: string, index: number): boolean {
@@ -54,17 +54,12 @@ function isCamelCaseBoundary(label: string, index: number): boolean {
 
   const previous = label[index - 1]!;
   const curr = label[index]!;
-  // lowercase -> uppercase
-  if (previous >= 'a' && previous <= 'z' && curr >= 'A' && curr <= 'Z') {
-    return true;
-  }
-
-  // non-digit -> digit
-  if ((previous < '0' || previous > '9') && curr >= '0' && curr <= '9') {
-    return true;
-  }
-
-  return false;
+  return (
+    // lowercase -> uppercase
+    (previous >= 'a' && previous <= 'z' && curr >= 'A' && curr <= 'Z')
+    // non-digit -> digit
+    || ((previous < '0' || previous > '9') && curr >= '0' && curr <= '9')
+  );
 }
 
 /**
@@ -178,7 +173,7 @@ export function fuzzyMatch(
   // Subsequent characters don't get the multiplier: max per-char score = SCORE_BASE + BONUS_CONSECUTIVE + BONUS_BOUNDARY + BONUS_CAMEL = 22
   const maxFirst = (SCORE_BASE + BONUS_CONSECUTIVE + BONUS_BOUNDARY + BONUS_CAMEL) * FIRST_CHAR_MULTIPLIER;
   const maxRest = SCORE_BASE + BONUS_CONSECUTIVE + BONUS_BOUNDARY + BONUS_CAMEL;
-  const maxPossible = maxFirst + Math.max(0, query.length - 1) * maxRest;
+  const maxPossible = maxFirst + (Math.max(0, query.length - 1) * maxRest);
   const normalized = Math.max(0, Math.min(1, bestScore / maxPossible));
 
   return {score: normalized, matchedIndices: bestIndices};

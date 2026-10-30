@@ -11,7 +11,7 @@ import type {
   OptionsSource,
   AsyncOptionsProvider,
 } from '../../types.js';
-import {prevGraphemeOffset, nextGraphemeOffset} from './text.js';
+import {previousGraphemeOffset, nextGraphemeOffset} from './text.js';
 
 // --- State ---
 export type AutocompleteState = {
@@ -49,13 +49,19 @@ export type AutocompleteAction =
 	| {type: 'SET_LOADING'; isLoading: boolean}
 	| {type: 'SET_ERROR'; error: Error};
 
-function clampVisible(
-  focusedIndex: number,
-  visibleFromIndex: number,
-  visibleToIndex: number,
-  visibleCount: number,
-  totalCount: number,
-): {visibleFromIndex: number; visibleToIndex: number} {
+function clampVisible({
+  focusedIndex,
+  visibleFromIndex,
+  visibleToIndex,
+  visibleCount,
+  totalCount,
+}: {
+  focusedIndex: number;
+  visibleFromIndex: number;
+  visibleToIndex: number;
+  visibleCount: number;
+  totalCount: number;
+}): {visibleFromIndex: number; visibleToIndex: number} {
   if (totalCount <= visibleCount) {
     return {visibleFromIndex: 0, visibleToIndex: totalCount};
   }
@@ -93,7 +99,7 @@ function clampVisible(
 }
 
 export function createReducer(visibleOptionCount: number) {
-  return function reducer(
+  return function (
     state: AutocompleteState,
     action: AutocompleteAction,
   ): AutocompleteState {
@@ -126,7 +132,7 @@ export function createReducer(visibleOptionCount: number) {
           return state;
         }
 
-        const start = prevGraphemeOffset(state.inputValue, state.cursorOffset);
+        const start = previousGraphemeOffset(state.inputValue, state.cursorOffset);
         const before = state.inputValue.slice(0, start);
         const after = state.inputValue.slice(state.cursorOffset);
         const newValue = before + after;
@@ -177,7 +183,7 @@ export function createReducer(visibleOptionCount: number) {
 
         return {
           ...state,
-          cursorOffset: prevGraphemeOffset(state.inputValue, state.cursorOffset),
+          cursorOffset: previousGraphemeOffset(state.inputValue, state.cursorOffset),
         };
       }
 
@@ -209,13 +215,13 @@ export function createReducer(visibleOptionCount: number) {
           state.focusedIndex + 1,
           state.filteredOptions.length - 1,
         );
-        const {visibleFromIndex, visibleToIndex} = clampVisible(
-          next,
-          state.visibleFromIndex,
-          state.visibleToIndex,
-          visibleOptionCount,
-          state.filteredOptions.length,
-        );
+        const {visibleFromIndex, visibleToIndex} = clampVisible({
+          focusedIndex: next,
+          visibleFromIndex: state.visibleFromIndex,
+          visibleToIndex: state.visibleToIndex,
+          visibleCount: visibleOptionCount,
+          totalCount: state.filteredOptions.length,
+        });
         return {
           ...state,
           focusedIndex: next,
@@ -230,13 +236,13 @@ export function createReducer(visibleOptionCount: number) {
         }
 
         const previous = Math.max(state.focusedIndex - 1, 0);
-        const {visibleFromIndex, visibleToIndex} = clampVisible(
-          previous,
-          state.visibleFromIndex,
-          state.visibleToIndex,
-          visibleOptionCount,
-          state.filteredOptions.length,
-        );
+        const {visibleFromIndex, visibleToIndex} = clampVisible({
+          focusedIndex: previous,
+          visibleFromIndex: state.visibleFromIndex,
+          visibleToIndex: state.visibleToIndex,
+          visibleCount: visibleOptionCount,
+          totalCount: state.filteredOptions.length,
+        });
         return {
           ...state,
           focusedIndex: previous,
@@ -307,13 +313,13 @@ export function createReducer(visibleOptionCount: number) {
       case 'SET_FILTERED': {
         const total = action.options.length;
         const clampedFocus = total === 0 ? 0 : Math.min(state.focusedIndex, total - 1);
-        const {visibleFromIndex, visibleToIndex} = clampVisible(
-          clampedFocus,
-          state.visibleFromIndex,
-          state.visibleToIndex,
-          visibleOptionCount,
-          total,
-        );
+        const {visibleFromIndex, visibleToIndex} = clampVisible({
+          focusedIndex: clampedFocus,
+          visibleFromIndex: state.visibleFromIndex,
+          visibleToIndex: state.visibleToIndex,
+          visibleCount: visibleOptionCount,
+          totalCount: total,
+        });
         return {
           ...state,
           filteredOptions: action.options,
@@ -335,11 +341,10 @@ export function createReducer(visibleOptionCount: number) {
           isLoading: false,
         };
       }
-
-      default: {
-        return state;
-      }
     }
+
+    // Unknown action types (e.g. from untyped callers) leave state unchanged.
+    return state;
   };
 }
 
@@ -462,7 +467,7 @@ export function useAutocompleteState(options_: UseAutocompleteStateOptions) {
       return;
     }
 
-    if (debounceTimerRef.current) {
+    if (debounceTimerRef.current !== null) {
       clearTimeout(debounceTimerRef.current);
     }
 
@@ -490,7 +495,7 @@ export function useAutocompleteState(options_: UseAutocompleteStateOptions) {
             });
             dispatch({type: 'SET_FILTERED', options: matches});
           },
-          error_ => {
+          (error_: unknown) => {
             if (counter !== requestCounterRef.current) {
               return;
             }
@@ -512,7 +517,7 @@ export function useAutocompleteState(options_: UseAutocompleteStateOptions) {
     }
 
     return () => {
-      if (debounceTimerRef.current) {
+      if (debounceTimerRef.current !== null) {
         clearTimeout(debounceTimerRef.current);
       }
     };

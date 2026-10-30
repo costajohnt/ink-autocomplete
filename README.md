@@ -26,7 +26,7 @@ A combobox/fuzzy-search autocomplete input component for [Ink](https://github.co
 
 ## Install
 
-```
+```sh
 npm install ink-combobox
 ```
 
@@ -180,7 +180,7 @@ const matches = fuzzyFilter('gn', options);
 
 When the number of matching options exceeds `visibleOptionCount`, the dropdown shows scroll indicators:
 
-```
+```text
 > app
   ❯ Apple
     Application
@@ -190,7 +190,7 @@ When the number of matching options exceeds `visibleOptionCount`, the dropdown s
 
 Scrolling down reveals more items and shows an upward indicator:
 
-```
+```text
 > app
   ↑ 1 more
     Application
