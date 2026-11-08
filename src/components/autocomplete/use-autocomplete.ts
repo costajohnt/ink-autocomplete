@@ -1,7 +1,7 @@
 import {useInput} from 'ink';
 import {theme} from './theme.js';
 import {graphemeSegments} from './text.js';
-import type {AutocompleteState, AutocompleteAction} from './use-autocomplete-state.js';
+import {getFocusedOption, type AutocompleteState, type AutocompleteAction} from './use-autocomplete-state.js';
 
 export type UseAutocompleteOptions = {
   state: AutocompleteState;
@@ -25,14 +25,10 @@ export function useAutocomplete(options: UseAutocompleteOptions) {
         return;
       }
 
-      // Enter: select focused option
+      // Enter: select focused option (no-op while results are stale)
       if (key.return) {
-        if (
-          state.isOpen &&
-          state.filteredOptions.length > 0 &&
-          state.focusedIndex < state.filteredOptions.length
-        ) {
-          const focused = state.filteredOptions[state.focusedIndex]!;
+        const focused = getFocusedOption(state);
+        if (focused) {
           dispatch({type: 'SELECT', value: focused.option.value, label: focused.option.label});
         }
 
