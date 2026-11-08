@@ -19,6 +19,10 @@ export type AutocompleteState = {
   cursorOffset: number;
   isOpen: boolean;
   filteredOptions: FuzzyMatch[];
+  // The inputValue that filteredOptions were computed for. While a filter is
+  // debouncing or an async fetch is loading, this lags inputValue and the list
+  // belongs to an older query, so Enter/Tab must not commit from it.
+  filteredFor: string | null;
   focusedIndex: number;
   visibleFromIndex: number;
   visibleToIndex: number;
@@ -45,9 +49,17 @@ export type AutocompleteAction =
 	| {type: 'SELECT'; value: string; label: string}
 	| {type: 'ACCEPT'}
 	| {type: 'CLOSE'}
-	| {type: 'SET_FILTERED'; options: FuzzyMatch[]}
+	| {type: 'SET_FILTERED'; options: FuzzyMatch[]; query?: string}
 	| {type: 'SET_LOADING'; isLoading: boolean}
 	| {type: 'SET_ERROR'; error: Error};
+
+// The focused option, or undefined when the dropdown is closed or the list is
+// stale (computed for a different query than the current input).
+export function getFocusedOption(state: AutocompleteState): FuzzyMatch | undefined {
+  return state.isOpen && state.filteredFor === state.inputValue
+    ? state.filteredOptions[state.focusedIndex]
+    : undefined;
+}
 
 function clampVisible({
   focusedIndex,
@@ -269,19 +281,18 @@ export function createReducer(visibleOptionCount: number) {
       }
 
       case 'ACCEPT': {
-        if (
-          !state.isOpen ||
-          state.filteredOptions.length === 0 ||
-          state.focusedIndex >= state.filteredOptions.length
-        ) {
+        const focused = getFocusedOption(state);
+        if (!focused) {
           return state;
         }
 
-        const focused = state.filteredOptions[state.focusedIndex]!;
         const {label} = focused.option;
         return {
           ...state,
           inputValue: label,
+          // The list is deliberately kept for the accepted label (filtering is
+          // skipped), so it stays current and a following Enter can commit.
+          filteredFor: label,
           cursorOffset: label.length,
           isOpen: true,
           // Keep focus on the accepted option. Filtering is skipped below, so
@@ -323,6 +334,8 @@ export function createReducer(visibleOptionCount: number) {
         return {
           ...state,
           filteredOptions: action.options,
+          // Callers that omit query (headless/plain JS) mean the current input.
+          filteredFor: action.query ?? state.inputValue,
           focusedIndex: clampedFocus,
           visibleFromIndex,
           visibleToIndex,
@@ -377,6 +390,7 @@ export function useAutocompleteState(options_: UseAutocompleteStateOptions) {
     cursorOffset: defaultValue.length,
     isOpen: false,
     filteredOptions: [],
+    filteredFor: null,
     focusedIndex: 0,
     visibleFromIndex: 0,
     visibleToIndex: 0,
@@ -493,7 +507,7 @@ export function useAutocompleteState(options_: UseAutocompleteStateOptions) {
                 matchRanges: match ? collapseIndices(match.matchedIndices) : [],
               };
             });
-            dispatch({type: 'SET_FILTERED', options: matches});
+            dispatch({type: 'SET_FILTERED', options: matches, query: state.inputValue});
           },
           (error_: unknown) => {
             if (counter !== requestCounterRef.current) {
@@ -506,7 +520,7 @@ export function useAutocompleteState(options_: UseAutocompleteStateOptions) {
         );
       } else {
         const filtered = fuzzyFilter(state.inputValue, stableOptions as Option[]);
-        dispatch({type: 'SET_FILTERED', options: filtered});
+        dispatch({type: 'SET_FILTERED', options: filtered, query: state.inputValue});
       }
     };
 

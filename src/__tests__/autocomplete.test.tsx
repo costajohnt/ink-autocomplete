@@ -632,11 +632,13 @@ describe('Autocomplete', () => {
     const inflight = makeDeferred<Option[]>();
     const onError = vi.fn();
     const onSelect = vi.fn();
-    // 'ap' is held in flight; every other query resolves so a list is selectable.
+    // The first 'a' fetch resolves so a list is selectable; every later fetch
+    // ('ap', then 'a' again after backspace) is held in flight.
+    let aCalls = 0;
     const asyncProvider = vi.fn(async (query: string): Promise<Option[]> =>
-      query === 'ap'
-        ? inflight.promise
-        : Promise.resolve([{label: 'Apple', value: 'apple'}]),
+      query === 'a' && ++aCalls === 1
+        ? Promise.resolve([{label: 'Apple', value: 'apple'}])
+        : inflight.promise,
     );
 
     const {lastFrame, stdin} = render(
@@ -652,9 +654,12 @@ describe('Autocomplete', () => {
     stdin.write('a');
     await waitForText(lastFrame, 'Apple');
 
-    // Start a fetch we keep pending, then select the still-focused option.
+    // Type then delete a character: the list is current for 'a' again while
+    // a refetch of 'a' is still pending. Select the focused option.
     stdin.write('p');
     await waitFor(() => asyncProvider.mock.calls.some(c => c[0] === 'ap'));
+    stdin.write('\u{7F}');
+    await waitFor(() => asyncProvider.mock.calls.filter(c => c[0] === 'a').length === 2);
     stdin.write('\r');
     await waitFor(() => onSelect.mock.calls.length > 0);
 
@@ -668,10 +673,13 @@ describe('Autocomplete', () => {
 
   it('discards an in-flight fetch that resolves after an accept (stale results not shown)', async () => {
     const inflight = makeDeferred<Option[]>();
+    // The first 'a' fetch resolves so a list is selectable; every later fetch
+    // ('ap', then 'a' again after backspace) is held in flight.
+    let aCalls = 0;
     const asyncProvider = vi.fn(async (query: string): Promise<Option[]> =>
-      query === 'ap'
-        ? inflight.promise
-        : Promise.resolve([{label: 'Apple', value: 'apple'}]),
+      query === 'a' && ++aCalls === 1
+        ? Promise.resolve([{label: 'Apple', value: 'apple'}])
+        : inflight.promise,
     );
 
     const {lastFrame, stdin} = render(
@@ -682,9 +690,12 @@ describe('Autocomplete', () => {
     stdin.write('a');
     await waitForText(lastFrame, 'Apple');
 
-    // Start a fetch we keep pending, then accept (Tab) the focused option.
+    // Type then delete a character so a refetch of 'a' is pending, then
+    // accept (Tab) the focused option.
     stdin.write('p');
     await waitFor(() => asyncProvider.mock.calls.some(c => c[0] === 'ap'));
+    stdin.write('\u{7F}');
+    await waitFor(() => asyncProvider.mock.calls.filter(c => c[0] === 'a').length === 2);
     stdin.write('\t');
     await waitForText(lastFrame, 'Apple');
 
@@ -693,6 +704,80 @@ describe('Autocomplete', () => {
     await delay(50);
 
     expect(clean(lastFrame)).not.toContain('ZEBRA');
+  });
+
+  it('enter and tab do not commit a stale option while the filter is debouncing', async () => {
+    const asyncProvider = vi.fn(async (query: string) =>
+      defaultOptions.filter(o => o.label.toLowerCase().includes(query.toLowerCase())),
+    );
+    const onSelect = vi.fn();
+    const onChange = vi.fn();
+    const {lastFrame, stdin} = render(
+      <Autocomplete options={asyncProvider} onSelect={onSelect} onChange={onChange} />,
+    );
+    await waitForReady(stdin);
+
+    stdin.write('a');
+    await waitForText(lastFrame, 'Apple');
+
+    // Fake only timers, so the default 150ms debounce for 'az' never fires
+    // while React/Ink keep scheduling on setImmediate.
+    vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']});
+    const flush = async () => {
+      for (let i = 0; i < 20; i++) {
+        await new Promise(resolve => {
+          setImmediate(resolve);
+        });
+      }
+    };
+
+    try {
+      stdin.write('z');
+      await flush();
+      stdin.write('\r');
+      await flush();
+      stdin.write('\t');
+      await flush();
+
+      expect(onSelect).not.toHaveBeenCalled();
+      expect(onChange).not.toHaveBeenCalledWith('Apple');
+      expect(asyncProvider).not.toHaveBeenCalledWith('az');
+
+      // Once the debounce elapses the 'az' results arrive and nothing was committed.
+      await vi.advanceTimersByTimeAsync(150);
+      await flush();
+      expect(asyncProvider).toHaveBeenCalledWith('az');
+      expect(onSelect).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('enter does not commit a stale option while an async fetch is loading', async () => {
+    const pending = makeDeferred<Option[]>();
+    const asyncProvider = vi.fn(async (query: string): Promise<Option[]> =>
+      query === 'a' ? [{label: 'Apple', value: 'apple'}] : pending.promise,
+    );
+    const onSelect = vi.fn();
+    const {lastFrame, stdin} = render(
+      <Autocomplete options={asyncProvider} debounceMs={0} onSelect={onSelect} />,
+    );
+    await waitForReady(stdin);
+
+    stdin.write('a');
+    await waitForText(lastFrame, 'Apple');
+    stdin.write('z');
+    await waitForText(lastFrame, 'Loading...');
+    stdin.write('\r');
+    await delay(50);
+    expect(onSelect).not.toHaveBeenCalled();
+
+    // When the fetch settles the fresh list is selectable.
+    pending.resolve([{label: 'Azalea', value: 'azalea'}]);
+    await waitForText(lastFrame, 'Azalea');
+    stdin.write('\r');
+    await waitFor(() => onSelect.mock.calls.length > 0);
+    expect(onSelect).toHaveBeenCalledWith('azalea', {label: 'Azalea', value: 'azalea'});
   });
 
   it('resumes filtering after a selection', async () => {
@@ -728,6 +813,7 @@ const makeState = (
   cursorOffset: 0,
   isOpen: true,
   filteredOptions: [],
+  filteredFor: null,
   focusedIndex: 0,
   visibleFromIndex: 0,
   visibleToIndex: 0,
@@ -809,6 +895,7 @@ describe('reducer ACCEPT', () => {
       inputValue: 'a',
       cursorOffset: 1,
       filteredOptions,
+      filteredFor: 'a',
       focusedIndex: 1,
       visibleToIndex: 3,
     });
@@ -816,5 +903,25 @@ describe('reducer ACCEPT', () => {
     expect(next.inputValue).toBe('avocado');
     expect(next.focusedIndex).toBe(1);
     expect(next.filteredOptions[next.focusedIndex]!.option.value).toBe('avocado');
+  });
+
+  it('is a no-op when the list belongs to a different query', () => {
+    const reducer = createReducer(5);
+    const state = makeState({
+      inputValue: 'az',
+      cursorOffset: 2,
+      filteredOptions: [{option: {label: 'apple', value: 'apple'}, score: 1, matchRanges: []}],
+      filteredFor: 'a',
+      visibleToIndex: 1,
+    });
+    expect(reducer(state, {type: 'ACCEPT'})).toBe(state);
+  });
+
+  it('treats SET_FILTERED without a query as current for the input', () => {
+    const reducer = createReducer(5);
+    const options = [{option: {label: 'apple', value: 'apple'}, score: 1, matchRanges: []}];
+    const filtered = reducer(makeState({inputValue: 'a', cursorOffset: 1}), {type: 'SET_FILTERED', options});
+    expect(filtered.filteredFor).toBe('a');
+    expect(reducer(filtered, {type: 'ACCEPT'}).inputValue).toBe('apple');
   });
 });
