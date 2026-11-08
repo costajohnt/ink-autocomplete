@@ -916,4 +916,12 @@ describe('reducer ACCEPT', () => {
     });
     expect(reducer(state, {type: 'ACCEPT'})).toBe(state);
   });
+
+  it('treats SET_FILTERED without a query as current for the input', () => {
+    const reducer = createReducer(5);
+    const options = [{option: {label: 'apple', value: 'apple'}, score: 1, matchRanges: []}];
+    const filtered = reducer(makeState({inputValue: 'a', cursorOffset: 1}), {type: 'SET_FILTERED', options});
+    expect(filtered.filteredFor).toBe('a');
+    expect(reducer(filtered, {type: 'ACCEPT'}).inputValue).toBe('apple');
+  });
 });

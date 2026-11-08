@@ -49,7 +49,7 @@ export type AutocompleteAction =
 	| {type: 'SELECT'; value: string; label: string}
 	| {type: 'ACCEPT'}
 	| {type: 'CLOSE'}
-	| {type: 'SET_FILTERED'; options: FuzzyMatch[]; query: string}
+	| {type: 'SET_FILTERED'; options: FuzzyMatch[]; query?: string}
 	| {type: 'SET_LOADING'; isLoading: boolean}
 	| {type: 'SET_ERROR'; error: Error};
 
@@ -334,7 +334,8 @@ export function createReducer(visibleOptionCount: number) {
         return {
           ...state,
           filteredOptions: action.options,
-          filteredFor: action.query,
+          // Callers that omit query (headless/plain JS) mean the current input.
+          filteredFor: action.query ?? state.inputValue,
           focusedIndex: clampedFocus,
           visibleFromIndex,
           visibleToIndex,
