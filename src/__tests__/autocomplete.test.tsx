@@ -658,7 +658,7 @@ describe('Autocomplete', () => {
     // a refetch of 'a' is still pending. Select the focused option.
     stdin.write('p');
     await waitFor(() => asyncProvider.mock.calls.some(c => c[0] === 'ap'));
-    stdin.write('\u007F');
+    stdin.write('\u{7F}');
     await waitFor(() => asyncProvider.mock.calls.filter(c => c[0] === 'a').length === 2);
     stdin.write('\r');
     await waitFor(() => onSelect.mock.calls.length > 0);
@@ -694,7 +694,7 @@ describe('Autocomplete', () => {
     // accept (Tab) the focused option.
     stdin.write('p');
     await waitFor(() => asyncProvider.mock.calls.some(c => c[0] === 'ap'));
-    stdin.write('\u007F');
+    stdin.write('\u{7F}');
     await waitFor(() => asyncProvider.mock.calls.filter(c => c[0] === 'a').length === 2);
     stdin.write('\t');
     await waitForText(lastFrame, 'Apple');
@@ -725,7 +725,6 @@ describe('Autocomplete', () => {
     vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']});
     const flush = async () => {
       for (let i = 0; i < 20; i++) {
-        // eslint-disable-next-line no-await-in-loop
         await new Promise(resolve => {
           setImmediate(resolve);
         });

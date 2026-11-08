@@ -56,11 +56,9 @@ export type AutocompleteAction =
 // The focused option, or undefined when the dropdown is closed or the list is
 // stale (computed for a different query than the current input).
 export function getFocusedOption(state: AutocompleteState): FuzzyMatch | undefined {
-  if (!state.isOpen || state.filteredFor !== state.inputValue) {
-    return undefined;
-  }
-
-  return state.filteredOptions[state.focusedIndex];
+  return state.isOpen && state.filteredFor === state.inputValue
+    ? state.filteredOptions[state.focusedIndex]
+    : undefined;
 }
 
 function clampVisible({
